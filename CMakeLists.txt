@@ -1,5 +1,6 @@
 project(PortableComponentModel)
 cmake_minimum_required(VERSION 3.17)
+set(CMAKE_CXX_STANDARD 17)
 
 # this is the type of build rules if the model is built as a standalone library
 add_library(

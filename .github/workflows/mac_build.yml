@@ -1,4 +1,4 @@
-name: Mac Releases
+name: Mac Build
 
 on: [push]
 
@@ -29,3 +29,12 @@ jobs:
 
     - name: Print Build Tree
       run: tree build/
+
+    - name: Run EnergyPlus
+      run: build/mock_energyplus
+
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: MacArtifact
+        path: build/mock_energyplus

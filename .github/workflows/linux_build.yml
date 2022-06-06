@@ -1,4 +1,4 @@
-name: Linux Releases
+name: Linux Build
 
 on: [push]
 
@@ -31,8 +31,11 @@ jobs:
     - name: Print Build Tree
       run: tree build/
 
-#    - name: Upload
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: Release
-#        path: build/something
+    - name: Run EnergyPlus
+      run: build/mock_energyplus
+
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: LinuxArtifact
+        path: build/mock_energyplus
