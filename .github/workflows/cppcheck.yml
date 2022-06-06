@@ -1,0 +1,17 @@
+name: CppCheck
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Install CppCheck
+      run: sudo apt-get install cppcheck
+
+    - name: Run CppCheck
+      run: cppcheck --template='[{file}]:{line}:{severity}:{message}' model/ fmu/ energyplus/
