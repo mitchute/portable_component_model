@@ -13,14 +13,5 @@ jobs:
     - name: Install CppCheck
       run: sudo apt-get install cppcheck
 
-    - name: Run CppCheck on Core Model
-      working-directory: model
-      run: cppcheck --template='[{file}]:{line}:{severity}:{message}' --suppress="uninitvar:*" .
-
-    - name: Run CppCheck on EnergyPlus Wrapper
-      working-directory: energyplus
-      run: cppcheck --template='[{file}]:{line}:{severity}:{message}' --suppress="uninitvar:*" .
-
-    - name: Run CppCheck on FMU Wrapper
-      working-directory: fmu
-      run: cppcheck --template='[{file}]:{line}:{severity}:{message}' --suppress="uninitvar:*" .
+    - name: Run CppCheck
+      run: cppcheck --template='[{file}]:{line}:{severity}:{message}' model/ fmu/ energyplus/
