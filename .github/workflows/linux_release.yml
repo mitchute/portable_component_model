@@ -1,0 +1,38 @@
+name: Linux Releases
+
+on: [push]
+
+jobs:
+  linux_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Dependencies
+      run: sudo apt update && sudo apt install -y tree
+
+    - name: Create Build Directory
+      run: cmake -E make_directory ./build/
+
+    - name: Configure CMake
+      working-directory: ./build
+      shell: bash
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=Release ../
+
+    - name: Build
+      working-directory: ./build
+      shell: bash
+      run: cmake --build . -j 2
+
+    - name: Print Build Tree
+      run: tree build/
+
+#    - name: Upload
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: Release
+#        path: build/something
