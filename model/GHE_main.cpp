@@ -42,10 +42,6 @@ gn - g value at index n
 outputs - funtion output
  */
 
-//test change 
-
-//TEST VALUES:
-
 // Definition of structures
 struct output_data{
     double Tout; // outlet temperature
@@ -55,7 +51,7 @@ struct json_data{
     double Ts; // Soil temp
     double cp; // Specific heat (heat energy required to change temp of material)
     double H; // Active borehole length (Active length of pipe)
-    double Rb; // Borehole Resistance (undefined)
+    double Rb; // Borehole Resistance
     double ks; // Soil conductivity
     std::tuple <std::vector<double> ,std::vector<double>, std::vector<double>> indexed_data;};
 
@@ -69,12 +65,31 @@ json_data read_json()
     std::string path = "/Users/ryan/Downloads/simpleGHE/simpleGHE/test.json";
     // json_data.indexed_data needs to have vectors in the following order: lntts, g_func, q_load
     
+    //HARD CODED TEST DATA
+    
+    std::vector<double> lntts =  {-15.22015406,-15.08300806,-14.94586206,-14.80871605,-14.67157005,-14.53442405,-14.39727805,-14.26013205,-14.12298605,-13.98584005,-13.84869405,-13.71154804,-13.57440204,-13.43725604,-13.30011004,-13.16296404,-13.02581804,-12.88867204,-12.75152604,-12.61438004,-12.47723403,-12.34008803,-12.20294203,-12.06579603}; //length is 24
+    std::vector<double> g_func = {-2.556919564,-2.483889186,-2.408186285,-2.329364731,-2.247153415,-2.161382726,-2.071953832,-1.978823254,-1.881993912,-1.781509211,-1.677448741,-1.569925155,-1.45908234,-1.34509531,-1.228172249,-1.108558858,-0.986544532,-0.862469138,-0.736728573,-0.609776928,-0.482123413,-0.354322868,-0.226959789,-0.100626916}; //length is 24
+    std::vector<double> q_load = {1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000,1000}; //length is 24
+    std::tuple <std::vector<double> ,std::vector<double>, std::vector<double>> indexed_data;
+    std::get<0>(indexed_data) = lntts;
+    std::get<1>(indexed_data) = g_func;
+    std::get<2>(indexed_data) = q_load;
+    
+    input.Ts = 10;
+    input.cp = 2000000.0;
+    input.H = 100;
+    input.Rb = 0.2477;
+    input.ks = 2.0;
+    input.indexed_data = indexed_data;
+    
+    
     return input;
 }
 
 //Expanding g data as step function so that it has same length as q_load
 std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tuple <std::vector<double> ,std::vector<double>, std::vector<double>> test_data, double ts){
-    std::tuple<std::vector<double>,std::vector<int>::size_type> (g_data);
+    
+
     std::vector<double> lntts = std::get <0> (test_data);
     std::vector<double> g_func = std::get <1> (test_data);
     std::vector<double> q_load = std::get <2>(test_data);
@@ -82,19 +97,19 @@ std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tupl
     // from length of q_load, build 0 - 8760 integer vector called q_time.
     std::vector<int>::size_type n = q_load.size();
     std::vector<int> q_time(n);
-    std::iota(begin(q_time),end(q_time),1);
-    n = n-1; //converting n from size of vector to an index
-    std::get<1>(g_data) = n ;
-    // for each value of q_time calculate ln(t/ts)
+    std::iota(begin(q_time),end(q_time),3600); //3600 is used here to convert hourly timesteps to seconds
+    n = n-1; //converting n from size of vector to n as an index
+    std::vector<double> output_g_values(n);
     
-    //TODO: ask Matt if q_time needs to be converted to SI units to use with the characteristic time (which is derived from SI values
+    
+    // for each value of q_time calculate ln(t/ts)
     int i = 0;
-    std::vector <double> q_lntts;
+    double q_lntts[n];
     for (int t : q_time){
         q_lntts[i] = log (t/ts);
         i++;}
     // Create a matching condition that replaces each lntts value from q_lnnts to the closest value from lnnts
-    std::vector <double> q_lntts_new;
+    double q_lntts_new[n];
     int j = 0;
     for (double q_t : q_lntts){
         for ( double time : lntts){
@@ -105,17 +120,18 @@ std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tupl
     i = 0;
     j = 0;
     for(double q_t_new : q_lntts_new){
-        if (q_t_new == lntts [j]){std::get<0>(g_data)[i] = g_func [j];}
+        if (q_t_new == lntts [j]){output_g_values [i]= g_func [j];}
         else {j++;}
         i++;}
-    // Create a vector, g_data, with these values that is the same length as q_load and return g_data
-    if (std::get<0>(g_data).size() == q_load.size()){return g_data;}
-    else{puts("q_load size does not equal g_data size");
-              exit (EXIT_FAILURE);}}
+    //Write data to g_data structure and return
+    std::tuple<std::vector<double>,std::vector<int>::size_type> (g_data);
+    std::get<0>(g_data) = output_g_values;
+    std::get<1>(g_data) = n;
+    
+    return g_data;}
 
 // eqn 1.11
-double summation(double n, std::vector<double> q_load, std::vector<double> g_data)
-{
+double summation(double n, std::vector<double> q_load, std::vector<double> g_data){
     double qi, qi1;
     double total = 0;
     int i = 0;
@@ -164,9 +180,9 @@ output_data simple_GHE(double Tin, double mdot)
     
 
     
-    //Debugging print functions:
-    std::cout << "n is " << n << std::endl;
-    std::cout << "qn1 is " << qn1 << std::endl;
+//    //Debugging print functions:
+//    std::cout << "n is " << n << std::endl;
+//    std::cout << "qn1 is " << qn1 << std::endl;
 
     //eqn 1.2
     // need to ensure variables passed to g are cosistent with what is required
@@ -186,9 +202,10 @@ output_data simple_GHE(double Tin, double mdot)
     //1.14
     double Tout = Tf - 0.5*( (qn * inputs.H)/(mdot * inputs.cp) );
     
-    std::cout << "qn before export is " << qn << std::endl;
-    std::cout << "Tf before export is " << Tf << std::endl;
-    std::cout << "Tout before export is " << Tout << std::endl;
+//    //Debugging print functions:
+//    std::cout << "qn before export is " << qn << std::endl;
+//    std::cout << "Tf before export is " << Tf << std::endl;
+//    std::cout << "Tout before export is " << Tout << std::endl;
     
     //updating q data and writing to structure for export from function:
     q_load[n+1] = qn;
@@ -196,7 +213,7 @@ output_data simple_GHE(double Tin, double mdot)
     outputs.Tout = Tout;
     outputs.q_out = q_load;
     
-//    Debugging print functions:
+//    //Debugging print functions:
 //    j = 0;
 //    while (j < 6){
 //        printf("q before export for index %d is %f\n",j,q_array[j]);
@@ -215,15 +232,16 @@ int main()
 {
     
     double Tin = 20;
-    double mdot = 0.0002;
+    double mdot = 0.02;
     output_data outputs = simple_GHE(Tin, mdot);
    
-    //reading output data
-    int j = 0;
-    while (j < 6){
-        std::cout << "q after export for index " << j << "is "<< outputs.q_out[j] << std::endl;
-        j = j + 1;
-    }
-    std::cout << "Tout after export is " << outputs.Tout << std::endl;
+//    //Reading output data
+//    int j = 0;
+//    while (j < 24){
+//        std::cout << "q after export for index " << j << "is "<< outputs.q_out[j] << std::endl;
+//        j = j + 1;
+//    }
+    std::vector<double>::size_type t_step = outputs.q_out.size();
+    std::cout << "Tout for timestep " << t_step << " is "<< outputs.Tout << std::endl;
     return 0;
 }
