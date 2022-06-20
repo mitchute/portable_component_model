@@ -11,8 +11,8 @@
 H - active borehole length (Active length of pipe)
 Rb - borehole Resistance
 Ts - soil temp
-Tin - inlet temp
-Tout - outlet temp
+Tout_k - outlet temp (K)
+Tout - outlet temp (C)
 Tf - simple mean of inlet and outlet temps
 mdot - mass flow rate
 cp - specific heat (heat energy required to change temp of material)
@@ -88,7 +88,7 @@ json_data read_json()
 
 //Expanding g data as step function so that it has same length as q_load
 std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tuple <std::vector<double> ,std::vector<double>, std::vector<double>> test_data, double ts){
-    
+    //TODO: this is where error is ocurring. output_g_values is not consistant g_func values. Complie and run to see. Is it better to just do a interpolation of the values and then match them to the calcualted lntts like the python code does? <-- Project for 6/21
 
     std::vector<double> lntts = std::get <0> (test_data);
     std::vector<double> g_func = std::get <1> (test_data);
@@ -108,7 +108,7 @@ std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tupl
     int i = 0;
     double q_lntts[n];
     for (int t : q_time){
-        q_lntts[i] = log (t/ts);
+        q_lntts[i] = log (t/ts); // without the exact ts value used to calcualte the orginal lntts, this calcualtion will not yield a perfect set of datapoints which can be matched with lntts.
         i++;}
     // Create a matching condition that replaces each lntts value from q_lnnts to the closest value from lnnts
     double q_lntts_new[n];
@@ -121,10 +121,9 @@ std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tupl
     // Match the values (which will now look like steps) of q_lnnts to the corresponding g values
     i = 0;
     j = 0;
-    std::vector<int>::size_type i_max = g_func.size();
     for (double q_lntts_temp : q_lntts_new){
-        while (j<i_max+1){
-            if (q_lntts_temp == lntts[j]){
+        for (double lntts_temp : lntts){
+            if (q_lntts_temp == lntts_temp){
                 output_g_values[i] = g_func[j];
             }j++;
             } i++;}
@@ -135,19 +134,19 @@ std::tuple<std::vector<double>,std::vector<int>::size_type> g_expander(std::tupl
         std::cout<< "q_lntts_new at timestep " << i << " is " << output << std::endl;
         i++;};
     //Debugging print function
-    int p = 1;
+    i = 1;
     for (double output : lntts){
-        std::cout<< "lntts at timestep " << p << " is " << output << std::endl;
-        p++;};
+        std::cout<< "lntts at timestep " << i << " is " << output << std::endl;
+        i++;};
     //Debugging print function
     i = 0;
     for (double output : g_func){
         std::cout<< "g_func at index " << i << " is " << output << std::endl;
         i++;};
     //Debugging print function
-    i = 0;
+    i = 1;
     for (double output : output_g_values){
-        std::cout<< "G_value at timestep " << i << " is " << output << std::endl;
+        std::cout<< "output_g_value at timestep " << i << " is " << output << std::endl;
         i++;}
     
     
@@ -166,9 +165,8 @@ double summation(double n, std::vector<double> q_load, std::vector<double> g_dat
     while ( i < n ){
         qi = q_load[i];
         qi1 = q_load[i-1];
-        // eqn 1.1
-        // need to ensure variables passed to g are cosistent with what is required
-        total = total + (qi - qi1)* g_data[i];
+        // eqn 1.11
+        total = total + ((qi - qi1)* g_data[i]); //TODO: currently this summation is just giving zero, becasue q values are constant for the given time period. This is cousing the Tout values to be much to cold.
         ++i;}
     return total;
 }
@@ -176,20 +174,7 @@ double summation(double n, std::vector<double> q_load, std::vector<double> g_dat
 /*---------------
 Main function
 ----------------*/
-output_data simple_GHE(double mdot)
-{
-//    //Debugging print functions:
-//    int j = 0;
-//    while (j < 5){
-//        printf("q at import for index %d is %f\n",j,q_array[j]);
-//        j = j + 1;
-//    }
-//    j = 0;
-//    while (j < 5){
-//        printf("g at import for index %d is %f\n",j,g_data[j]);
-//        j = j + 1;
-//    }
-    
+output_data simple_GHE(double mdot){
     // loading JSON data. In development
     json_data inputs = read_json(); //this will be a function that reads and returns the data from the JSON file. See struct json_data for output variable type
     std::vector<double> q_load = std::get<2>(inputs.indexed_data);
@@ -209,7 +194,6 @@ output_data simple_GHE(double mdot)
         double qn1 = q_load[n];
         double qn = q_load[n+1];
         //eqn 1.2
-        // need to ensure variables passed to g are cosistent with what is required
         double gn = std::get<0>(g_data)[n];
         
         // eqn 1.3
@@ -217,46 +201,23 @@ output_data simple_GHE(double mdot)
         
         //eqn 1.11
         double c1 = summation(n, q_load, std::get<0>(g_data));
-        /* Main functions to solve: 1.13, 1.12, 1.14 (In that order)*/
-        // 1.13
-//        double qn = ( (temp_q - inputs.Ts) + ( ((qn1*gn)/c0) - (c1/c0) ) ) / ( (0.5 * (inputs.H/(mdot * inputs.cp))) + (gn / c0) + inputs.Rb); // TODO: This model assumes Ts is constant. Is that right?
+        std::cout << "c1 for time step " << n << " is "<< c1 << std::endl;
+      
         // 1.12
         double Tf = inputs.Ts + c0*(((qn - qn1) * gn) + c1) + qn * inputs.Rb;
+        std::cout << "Tf for time step " << n << " is "<< Tf << std::endl;
         //1.14
-        Tout[n] = Tf - 0.5*( (qn * inputs.H)/(mdot * inputs.cp) );
+        double Tout_k = Tf - 0.5*( (qn * inputs.H)/(mdot * inputs.cp) ); //units of kelvin
+        Tout[n] = Tout_k - 273.15; //units of celcius
         
-//        std::cout << "qn for time step " << n << " is "<< qn << std::endl;
         std::cout << "Tout for time step " << n << " is "<<Tout[n]<<std::endl;
         n++;};
-    
-
-    
-//    //Debugging print functions:
-//    std::cout << "n is " << n << std::endl;
-//    std::cout << "qn1 is " << qn1 << std::endl;
-
-    
-//    //Debugging print functions:
-//    std::cout << "qn before export is " << qn << std::endl;
-//    std::cout << "Tf before export is " << Tf << std::endl;
-//    std::cout << "Tout before export is " << Tout << std::endl;
     
     //Writing to structure for export from function:
     output_data outputs;
     outputs.Tout = Tout;
     outputs.q_out = q_load;
     
-//    //Debugging print functions:
-//    j = 0;
-//    while (j < 6){
-//        printf("q before export for index %d is %f\n",j,q_array[j]);
-//        j = j + 1;
-//    }
-//    j = 0;
-//    while (j < 5){
-//        printf("g before export for index %d is %f\n",j,g_data[j]);
-//        j = j + 1;
-//    }
     return outputs ;
 }
 
