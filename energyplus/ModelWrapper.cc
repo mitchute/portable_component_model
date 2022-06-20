@@ -1,6 +1,8 @@
-#include "Model.hh"
-#include "EnergyPlus.hh"
 #include <iostream>
+
+#include "EnergyPlus.hh"
+#include "ModelWrapper.hh"
+#include <model/model.h>
 
 void MyPlantModel::simulate(const PlantLocation &pl) {
   m.stepForward(heatGain, timeStep);

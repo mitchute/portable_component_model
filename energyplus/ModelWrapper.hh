@@ -1,5 +1,8 @@
-#include "../model/model.h"
+#ifndef ENEGYPLUS_MODELWRAPPER_H
+#define ENEGYPLUS_MODELWRAPPER_H
+
 #include "EnergyPlus.hh"
+#include <model/model.h>
 
 struct MyPlantModel : PlantComponent {
   MyPlantModel(Real64 temperatureInit, Real64 mass, Real64 cp)
@@ -8,3 +11,5 @@ struct MyPlantModel : PlantComponent {
   void printResult() const;
   LumpedMass m;
 };
+
+#endif // ENEGYPLUS_MODELWRAPPER_H
