@@ -1,7 +1,7 @@
 #ifndef ENEGYPLUS_MODELWRAPPER_H
 #define ENEGYPLUS_MODELWRAPPER_H
 
-#include "EnergyPlus.hh"
+#include <energyplus/EnergyPlus.hh>
 #include <model/model.h>
 
 struct MyPlantModel : PlantComponent {
