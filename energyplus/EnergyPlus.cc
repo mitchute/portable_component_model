@@ -1,5 +1,5 @@
-#include "EnergyPlus.hh"
-#include "ModelWrapper.hh"
+#include <energyplus/EnergyPlus.hh> // "EnergyPlus.hh"
+#include <energyplus/ModelWrapper.hh> // "ModelWrapper.hh"
 #include <model/model.h>
 
 int main() {
