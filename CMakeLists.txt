@@ -20,5 +20,11 @@ add_executable(
         energyplus/EnergyPlus.cc
 )
 
+# this is the type of build rules if this was built as a part of EnergyPlus
+add_executable(
+        simple_ghe
+        model/GHE_main.cpp
+)
+
 # this is the type of build rules if this was built as an FMU
 # ...
