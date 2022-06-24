@@ -66,82 +66,81 @@ json_data read_json() {
     // HARD CODED TEST DATA
 
     std::vector<double> lntts = { -15.22015406,
-        -15.08300806,
-        -14.94586206,
-        -14.80871605,
-        -14.67157005,
-        -14.53442405,
-        -14.39727805,
-        -14.26013205,
-        -14.12298605,
-        -13.98584005,
-        -13.84869405,
-        -13.71154804,
-        -13.57440204,
-        -13.43725604,
-        -13.30011004,
-        -13.16296404,
-        -13.02581804,
-        -12.88867204,
-        -12.75152604,
-        -12.61438004,
-        -12.47723403,
-        -12.34008803,
-        -12.20294203,
-        -12.06579603,
-        -11.92865003,
-        -11.79150403,
-        -11.65435803,
-        -11.51721203,
-        -11.38006602,
-        -11.24292002,
-        -11.10577402,
-        15.96862802,
-        15.83148202,
-        15.69433602,
-        15.55719002,
-        15.42004402,
-        15.28289802,
-        15.14575201,
-        15.00860601,
-        -9.871460012,
-        -9.734314011,
-        -9.597168009,
-        -9.460022008,
-        -9.322876007,
-        -9.185730006,
-        -9.048584005,
-        -8.911438004,
-        -8.774292002,
-        -8.637146001,
-        -8.5,
-        -8.5,
-        -7.8,
-        -7.2,
-        -6.5,
-        -5.9,
-        -5.2,
-        -4.5,
-        -3.963,
-        -3.27,
-        -2.864,
-        -2.577,
-        -2.171,
-        -1.884,
-        -1.191,
-        -0.497,
-        -0.274,
-        -0.051,
-        0.196,
-        0.419,
-        0.642,
-        0.873,
-        1.112,
-        1.335,
-        1.679,
-        2.028,
-        2.275,
-        3.003};
+                                 -15.08300806,
+                                 -14.94586206,
+                                 -14.80871605,
+                                 -14.67157005,
+                                 -14.53442405,
+                                 -14.39727805,
+                                 -14.26013205,
+                                 -14.12298605,
+                                 -13.98584005,
+                                 -13.84869405,
+                                 -13.71154804,
+                                 -13.57440204,
+                                 -13.43725604,
+                                 -13.30011004,
+                                 -13.16296404,
+                                 -13.02581804,
+                                 -12.88867204,
+                                 -12.75152604,
+                                 -12.61438004,
+                                 -12.47723403,
+                                 -12.34008803,
+                                 -12.20294203,
+                                 -12.06579603,
+                                 -11.92865003,
+                                 -11.79150403,
+                                 -11.65435803,
+                                 -11.51721203,
+                                 -11.38006602,
+                                 -11.24292002,
+                                 -11.10577402,
+                                 -10.96862802,
+                                 -10.83148202,
+                                 -10.69433602,
+                                 -10.55719002,
+                                 -10.42004402,
+                                 -10.28289802,
+                                 -10.14575201,
+                                 -10.00860601,
+                                 -9.871460012,
+                                 -9.734314011,
+                                 -9.597168009,
+                                 -9.460022008,
+                                 -9.322876007,
+                                 -9.185730006,
+                                 -9.048584005,
+                                 -8.911438004,
+                                 -8.774292002,
+                                 -8.637146001,
+                                 -8.5,
+                                 -7.8,
+                                 -7.2,
+                                 -6.5,
+                                 -5.9,
+                                 -5.2,
+                                 -4.5,
+                                 -3.963,
+                                 -3.27,
+                                 -2.864,
+                                 -2.577,
+                                 -2.171,
+                                 -1.884,
+                                 -1.191,
+                                 -0.497,
+                                 -0.274,
+                                 -0.051,
+                                 0.196,
+                                 0.419,
+                                 0.642,
+                                 0.873,
+                                 1.112,
+                                 1.335,
+                                 1.679,
+                                 2.028,
+                                 2.275,
+                                 3.003};
     //Debugging print function
     std::cout << "Size of lntts is " << lntts.size() << std::endl;
     std::cout << " " << std::endl;
@@ -264,72 +263,36 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>, std::vector<doub
         q_lntts[i] = log(t / ts);
         ++i;
     }
-    // PURPOSE OF THIS SUBROUTINE:
-    //    To interpolate or extrapolate data in GFILE
-    //    to find the correct g-function value for a
-    //    known value of the natural log of (T/Ts)
-
-    // The following IF loop determines the g-function for the case
-    // when q_lntts_temp is less than the first element of the lntts vector.
-    // In this case, the g-function must be found by extrapolation.
     int j = 0;
-    int Npairs = lntts.size();
-    for (double q_lntts_temp : q_lntts) {
-        if (q_lntts_temp <= lntts[0]) {
-            output_g_values[j] = ((q_lntts_temp - lntts[0]) / (lntts[1] - lntts[0])) * (g_func[1] - g_func[0]) + g_func[0];
-            std::cout << "q_lntts_temp is less min lntts at index " << j << std::endl;
-        }
+    for (double lntts_val : q_lntts){
+        // Assuming x and y are equal length - this should be caught upon initialization
+        // Assuming x and y have at least 2 elements
+        // Assuming x is monotonic
 
-        // The following IF loop determines the g-function for the case
-        // when q_lntts_temp is greater than the last element of the lntts
-        // array. In this case, the g-function must be found by extrapolation.
+        // Probably shouldn't pass x and y each time. Just need to create an interpolator object,
+        // and pass in the data once upon construction.
 
-        else if (q_lntts_temp > lntts[Npairs]) {
-            output_g_values[j] =
-                ((q_lntts_temp - lntts[Npairs]) / (lntts[Npairs - 1] - lntts[Npairs])) * (g_func[Npairs - 1] - g_func[Npairs]) + g_func[Npairs];
-            std::cout << "q_lntts_temp is greater than max lntts at index " << j << std::endl;
-        }
-
-        // The following DO loop is for the case when LnTTsVal falls within
-        // the first and last elements of the LnTTs array, or is identically
-        // equal to one of the LnTTs elements.  In this case the g-function
-        // must be found by interpolation.
-        // USING BINARY SEARCH TO FIND THE ELEMENT
-        bool Found = false;
-        int Low = 1;
-        int High = Npairs;
-        int Mid = (Low + High) / 2;
-        while (Low <= High) {
-            Mid = (Low + High) / 2;
-            if (lntts[Mid] < q_lntts_temp) {
-                Low = Mid + 1;
-            } else {
-                if (lntts[Mid] > q_lntts_temp) {
-                    High = Mid - 1;
-                } else {
-                    Found = true;
-                    break;
-                }
+        auto lntts_begin = lntts.begin();
+        auto lntts_end = lntts.end();
+        auto upper_it = std::upper_bound(lntts_begin, lntts_end, lntts_val);
+        // std::cout << *upper_it << "\n";
+        if (upper_it == lntts_begin) {
+            // Extrapolating beyond the lower bound
+            output_g_values[j] = g_func.front();
             }
-        }
-        // q_lntts_temp is identical to one of the lntts array elements return
-        // gFuncVal the gFuncVal after applying the correction
-        if (Found) {
-            output_g_values[j] = g_func[Mid];
-        }
-
-        // q_lntts_temp is in between any of the two lntts array elements find
-        // the g-function value by interpolation and apply the correction and
-        // return gFuncVal
-        else {
-            if (lntts[Mid] < q_lntts_temp)
-                ++Mid;
-            output_g_values[j] = ((q_lntts_temp - lntts[Mid]) / (lntts[Mid - 1] - lntts[Mid])) * (g_func[Mid - 1] - g_func[Mid]) + g_func[Mid];
-            //Debugging print functions
-            std::cout << "g value interpolated at index j = " << j << std::endl;
-            std::cout << "Mid value is " << Mid << std::endl;
-        };
-        
+        else if (upper_it == lntts_end) {
+            // Extrapolating beyond the upper bound
+            output_g_values[j] = g_func.back();
+            }
+        else{
+            int u_idx = std::distance(lntts.begin(), upper_it);
+            int l_idx = u_idx - 1;
+            double lntts_low = lntts[l_idx];
+            double lntts_high = lntts[u_idx];
+            double g_func_low = g_func[l_idx];
+            double g_func_high = g_func[u_idx];
+            output_g_values[j] = (lntts_val - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
+            }
         j++;
     }
 //    //Debugging print functions
@@ -473,9 +436,11 @@ int main() {
 //    }
     // Output print function
     std::cout << " " << std::endl;
+    std::cout << "MTF" << std::endl;
     i = 1;
     for (double output : outputs.Tf) {
-        std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+        std::cout << output << "\n";
         ++i;
     }
     return 0;
