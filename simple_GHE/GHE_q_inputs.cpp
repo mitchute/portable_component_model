@@ -23,19 +23,19 @@
 //g_func - g values for given lntts values (y-axis on plots) from JSON
 //q_load - load data
 //q_time - time data corresponding to each q_load
-//q_lntts - calculated non-dimensionalized time for q_time
+//q_lntts - calcualted non-dimensionalized time for q_time
 //n - index value equal to the last position in q_load
 //c1 - history terms
-//c0 - simplification term
+//c0 - simplication term
 //qn - current heat load
 //q_delta - load delta
 //total - total of summation equation. Defined in function
 //inputs - data structure with inputs read from the JSON file
 //alphas - soil thermal diffusivity (see pg 12 of Mitchell) (also see line 30 of main.py from the repo shared by Matt)
 //ts - characteristic time (way to non-dimensionalize the time) see page 12
-//i/j - general purpose indexes
+//i/j - genral purpose indexes
 //gn - g value at index n
-//outputs - function output
+//outputs - funtion output
 
 // Definition of structures
 struct output_data {
@@ -50,8 +50,7 @@ struct json_data {
     double Rb; // Borehole Resistance
     double ks; // Soil conductivity
     double rcp; //Rho cp
-    double Tin; //inlet temp
-    std::tuple<std::vector<double>, std::vector<double>> indexed_data;
+    std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> indexed_data;
 };
 
 //---------------------------------------------------
@@ -222,9 +221,11 @@ json_data read_json() {
         6.306229149,
         6.313183067,
         6.324383675};
-    std::tuple<std::vector<double>, std::vector<double>> indexed_data;
+    std::vector<double> q_load = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};  // length is 24
+    std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> indexed_data;
     std::get<0>(indexed_data) = lntts;
     std::get<1>(indexed_data) = g_func;
+    std::get<2>(indexed_data) = q_load;
 
     input.Ts = 10;
     input.cp = 4200;
@@ -232,27 +233,27 @@ json_data read_json() {
     input.Rb = 0.2477;
     input.ks = 2.0;
     input.rcp = 2000000.0;
-    input.Tin = 20;
     input.indexed_data = indexed_data;
 
     return input;
 }
 
 // Expanding g data as step function so that it has same length as q_load
-std::vector<double>
-g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n, double ts) {
+std::tuple<std::vector<double>, std::vector<int>::size_type>
+g_expander(std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> test_data, double ts) {
 
     std::vector<double> lntts = std::get<0>(test_data);
     std::vector<double> g_func = std::get<1>(test_data);
-    ++n;
+    std::vector<double> q_load = std::get<2>(test_data);
 
     // from length of q_load, build 0 - n integer vector called q_time.
-
-    int q_time[n];
+    std::vector<int>::size_type n = q_load.size();
+    std::vector<double> output_g_values(n);
+    double q_time[n];
     int k = 0;
     while (k < n) {
         q_time[k] = 3600 * (k + 1);
-        ++k;
+        k++;
     }; // 3600 is used here to convert hourly timesteps to seconds
 
     // for each value of q_time calculate ln(t/ts)
@@ -263,7 +264,6 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
         ++i;
     }
     int j = 0;
-    std::vector<double> output_g_values(n);
     for (double lntts_val : q_lntts){
         // Assuming x and y are equal length - this should be caught upon initialization
         // Assuming x and y have at least 2 elements
@@ -293,41 +293,41 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
             double g_func_high = g_func[u_idx];
             output_g_values[j] = (lntts_val - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
             }
-        ++j;
+        j++;
     }
 
     // Write data to g_data structure and return
-    std::vector<double> g_data = output_g_values;
+    std::tuple<std::vector<double>, std::vector<int>::size_type>(g_data);
+    std::get<0>(g_data) = output_g_values;
+    std::get<1>(g_data) = n;
+
     return g_data;
 }
 
 // eqn 1.11
 double summation(int n, std::vector<double> q_load, std::vector<double> g_data) {
-    double q_delta;
+    double q_delta = 0;
     double total = 0;
     int i = 0;
     int j = n;
-    if (n !=0) {
-        while (i < n) {
-            if (i == 0) {
-                q_delta = q_load[i] - 0;
-            } else {
-                q_delta = q_load[i] - q_load[i - 1];
-            }
-            // eqn 1.11
-            total = total + (q_delta * g_data[j]);
-                    //Debugging print functions
-                    //std::cout << "Summation " << total << std::endl;
-//                    std::cout << "q_delta " << q_delta << std::endl;
-            j = j - 1;
-            ++i;
+    while (i <= n) {
+        if (i == 0) {
+            q_delta = q_load[i] - 0;
+        } else {
+            q_delta = q_load[i] - q_load[i - 1];
         }
+        // eqn 1.11
+        total = total + (q_delta * g_data[j]);
+//        //Debugging print functions
+//        std::cout << "Summation term at " << i << " is " << total << std::endl;
+//        std::cout << "q_delta for summation index " << i << " is " << q_delta << std::endl;
+        j = j - 1;
+        ++i;
     }
-    //Debugging Print Functions
-//    //std::cout << "g_data for index " << n << " is " << g_data[n] << std::endl;
-//    std::cout << "q_load[" << n << "] is " << q_load[n] << std::endl;
-//    std::cout << "total for index " << n << " is " << total << std::endl;
-//    std::cout << " " << std::endl;
+//    //Debugging Print Functions
+//    std::cout << "g_data for index " << n << " n " << g_data[n] << std::endl;
+//    std::cout << "summation total for timestep " << n << " is " << total << std::endl;
+    std::cout << total << "\n";
     return total;
 }
 
@@ -339,66 +339,50 @@ output_data simple_GHE(double mdot) {
     json_data inputs = read_json(); // this will be a function that reads and
                                     // returns the data from the JSON file. See
                                     // struct json_data for output variable type
-    std::vector<double> q_load;
+    std::vector<double> q_load = std::get<2>(inputs.indexed_data);
 
     // Deriving characteristic time
     double alpha_s = inputs.ks/inputs.rcp;
     double ts = pow(inputs.H, 2) / (9 * alpha_s);
+
+    // loading g_data
+    std::tuple<std::vector<double>, std::vector<int>::size_type> g_data = g_expander(inputs.indexed_data, ts);
 
     // eqn 1.3
     double c0 = 1 / (2 * M_PI * inputs.ks);
     
     // Main Loop
     int n = 0;
-    int m = 200; //num of iterations
+    auto m = std::get<1>(g_data);
     std::vector<double> Tout(m), Tf(m);
-    double c1, qn, qn1;
+    double c1, qn;
     while (n < m) {
 
-
-        // loading g_data
-        std::vector<double> g_data = g_expander(inputs.indexed_data, n, ts);
-        double gn = g_data[n];
-//        //Debugging print function
-//        std::cout << gn << "\n";
+        // current load
+        qn = -q_load[n];
 
         // eqn 1.11
-
-        c1 = (1)*summation(n, q_load, g_data);
-
-        // calculating current load and appending to data
-
-        if (n>0) {
-            qn1 =  q_load[n];
-        }
-        else {
-            qn1 = 0;
-        }
-        qn = (inputs.Tin - inputs.Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(inputs.H/(mdot*inputs.cp)))+(gn*c0)+inputs.Rb);
-        q_load.push_back (qn);
-
+        
+        c1 = (-1)*summation(n, q_load, std::get<0>(g_data));
 //        //Debugging print function
-//        std::cout << qn1 << "\n";
-
-//        //Debugging print function
-//        std::cout << (((qn - qn1)*gn) + c1) << "\n";
-
+//        std::cout << c1 << "\n";
+        
         // 1.12
-        Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
+        Tf[n] = inputs.Ts + (c0 * c1) + qn * inputs.Rb;
+        // Debugging print functions
+//        std::cout << "Ts for timestep " << n << " is " << inputs.Ts << std::endl;
+//        std::cout << "c1 for timestep " << n << " is " << c1 << std::endl;
+//        std::cout << "c0 for timestep " << n << " is " << c0 << std::endl;
+//        std::cout << "qn for timestep " << n << " is " << qn << std::endl;
+//        std::cout << "Rb for timestep" << n << " is " << inputs.Rb << std::endl;
+//        std::cout << " " << std::endl;
         
         
         // 1.14
         Tout[n] = Tf[n] - 0.5 * ((qn * inputs.H) / (mdot * inputs.cp));
-
-        //Debugging print function
-        std::cout << "q values at " << n << std::endl;
-        for (double q : q_load){
-            std::cout << q << std::endl;
-        }
-        std::cout<< " " << std::endl;
         n++;
     };
-
+    
     // Writing to structure for export from function:
     output_data outputs;
     outputs.Tout = Tout;
@@ -420,14 +404,14 @@ int main() {
 //        std::cout << "Tout for timestep " << i << " is " << output << std::endl;
 //        ++i;
 //    }
-//    // Output print function
-//    std::cout << " " << std::endl;
-//    std::cout << "MTF" << std::endl;
-//    i = 1;
-//    for (double output : outputs.Tf) {
-//        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
-//        std::cout << output << "\n";
-//        ++i;
-//    }
+    // Output print function
+    std::cout << " " << std::endl;
+    std::cout << "MTF" << std::endl;
+    i = 1;
+    for (double output : outputs.Tf) {
+        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+        std::cout << output << "\n";
+        ++i;
+    }
     return 0;
 }
