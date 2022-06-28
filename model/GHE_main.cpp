@@ -5,6 +5,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <fstream>
 
 //Variables (See nomenclature section):
 //H - active borehole length (Active length of pipe)
@@ -36,6 +37,10 @@
 //i/j - general purpose indexes
 //gn - g value at index n
 //outputs - function output
+
+//CSV Set up for debugging
+std::ofstream static debugging("../debugging.csv", std::ofstream::out);
+
 
 // Definition of structures
 struct output_data {
@@ -142,9 +147,9 @@ json_data read_json() {
                                  2.028,
                                  2.275,
                                  3.003};
-    //Debugging print function
-    std::cout << "Size of lntts is " << lntts.size() << std::endl;
-    std::cout << " " << std::endl;
+//    //Debugging print function
+//    std::cout << "Size of lntts is " << lntts.size() << std::endl;
+//    std::cout << " " << std::endl;
     std::vector<double> g_func = {-2.556919564,
         -2.483889186,
         -2.408186285,
@@ -269,9 +274,6 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
         // Assuming x and y have at least 2 elements
         // Assuming x is monotonic
 
-        // Probably shouldn't pass x and y each time. Just need to create an interpolator object,
-        // and pass in the data once upon construction.
-
         auto lntts_begin = lntts.begin();
         auto lntts_end = lntts.end();
         auto upper_it = std::upper_bound(lntts_begin, lntts_end, lntts_val);
@@ -316,18 +318,10 @@ double summation(int n, std::vector<double> q_load, std::vector<double> g_data) 
             }
             // eqn 1.11
             total = total + (q_delta * g_data[j]);
-                    //Debugging print functions
-                    //std::cout << "Summation " << total << std::endl;
-//                    std::cout << "q_delta " << q_delta << std::endl;
             j = j - 1;
             ++i;
         }
     }
-    //Debugging Print Functions
-//    //std::cout << "g_data for index " << n << " is " << g_data[n] << std::endl;
-//    std::cout << "q_load[" << n << "] is " << q_load[n] << std::endl;
-//    std::cout << "total for index " << n << " is " << total << std::endl;
-//    std::cout << " " << std::endl;
     return total;
 }
 
@@ -339,7 +333,6 @@ output_data simple_GHE(double mdot) {
     json_data inputs = read_json(); // this will be a function that reads and
                                     // returns the data from the JSON file. See
                                     // struct json_data for output variable type
-    std::vector<double> q_load;
 
     // Deriving characteristic time
     double alpha_s = inputs.ks/inputs.rcp;
@@ -350,7 +343,8 @@ output_data simple_GHE(double mdot) {
     
     // Main Loop
     int n = 0;
-    int m = 200; //num of iterations
+    int m = 100; //num of iterations
+    std::vector<double> q_load;
     std::vector<double> Tout(m), Tf(m);
     double c1, qn, qn1;
     while (n < m) {
@@ -359,8 +353,6 @@ output_data simple_GHE(double mdot) {
         // loading g_data
         std::vector<double> g_data = g_expander(inputs.indexed_data, n, ts);
         double gn = g_data[n];
-//        //Debugging print function
-//        std::cout << gn << "\n";
 
         // eqn 1.11
 
@@ -368,20 +360,18 @@ output_data simple_GHE(double mdot) {
 
         // calculating current load and appending to data
 
+
         if (n>0) {
-            qn1 =  q_load[n];
+            qn1 =  q_load[n-1];
         }
-        else {
-            qn1 = 0;
+        else{
+            qn1 =  0;
         }
+
         qn = (inputs.Tin - inputs.Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(inputs.H/(mdot*inputs.cp)))+(gn*c0)+inputs.Rb);
         q_load.push_back (qn);
-
-//        //Debugging print function
-//        std::cout << qn1 << "\n";
-
-//        //Debugging print function
-//        std::cout << (((qn - qn1)*gn) + c1) << "\n";
+        // Printing to CSV for debugging
+        debugging << n << "," << qn << "," << qn1 << "," << q_load[n-1] << "," << gn << "," << c1 << "," << c0 << "," << inputs.Tin << "," << inputs.Ts << "," << inputs.H << "," << mdot << "," << inputs.cp << "," << inputs.Rb << "\n";
 
         // 1.12
         Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
@@ -390,12 +380,6 @@ output_data simple_GHE(double mdot) {
         // 1.14
         Tout[n] = Tf[n] - 0.5 * ((qn * inputs.H) / (mdot * inputs.cp));
 
-        //Debugging print function
-        std::cout << "q values at " << n << std::endl;
-        for (double q : q_load){
-            std::cout << q << std::endl;
-        }
-        std::cout<< " " << std::endl;
         n++;
     };
 
@@ -409,6 +393,8 @@ output_data simple_GHE(double mdot) {
 
 int main() {
 
+    debugging << "n" << "," << "qn" << "," << "qn1" << ","  << "q_load[n-1]" << "," << "gn" << "," << "c1" << "," << "c0" << "," << "inputs.Tin" << "," << "inputs.Ts" << "," << "inputs.H" << "," << "mdot" << "," << "inputs.cp" << "," << "inputs.Rb" << "\n";
+
     double mdot = 0.2;
     int i;
     output_data outputs = simple_GHE(mdot);
@@ -417,17 +403,19 @@ int main() {
 //    std::cout << " " << std::endl;
 //    i = 1;
 //    for (double output : outputs.Tout) {
-//        std::cout << "Tout for timestep " << i << " is " << output << std::endl;
-//        ++i;
-//    }
-//    // Output print function
-//    std::cout << " " << std::endl;
-//    std::cout << "MTF" << std::endl;
-//    i = 1;
-//    for (double output : outputs.Tf) {
-//        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+//        //std::cout << "Tout for timestep " << i << " is " << output << std::endl;
 //        std::cout << output << "\n";
 //        ++i;
 //    }
+    // Output print function
+    std::cout << " " << std::endl;
+    std::cout << "MTF" << std::endl;
+    i = 1;
+    for (double output : outputs.Tf) {
+        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+        std::cout << output << "\n";
+        ++i;
+    }
+    std::cout << "executed successfully" << std::endl;
     return 0;
 }

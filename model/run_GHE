@@ -1,0 +1,2 @@
+clang++ -std=c++11 GHE_main.cpp -o GHE_execute.exe
+./GHE_execute.exe

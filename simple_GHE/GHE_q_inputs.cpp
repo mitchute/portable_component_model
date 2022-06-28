@@ -221,7 +221,7 @@ json_data read_json() {
         6.306229149,
         6.313183067,
         6.324383675};
-    std::vector<double> q_load = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};  // length is 24
+    std::vector<double> q_load = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};  // length is 24
     std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> indexed_data;
     std::get<0>(indexed_data) = lntts;
     std::get<1>(indexed_data) = g_func;
@@ -397,21 +397,21 @@ int main() {
     int i;
     output_data outputs = simple_GHE(mdot);
 
-//    // Output print function
-//    std::cout << " " << std::endl;
-//    i = 1;
-//    for (double output : outputs.Tout) {
-//        std::cout << "Tout for timestep " << i << " is " << output << std::endl;
-//        ++i;
-//    }
     // Output print function
     std::cout << " " << std::endl;
-    std::cout << "MTF" << std::endl;
     i = 1;
-    for (double output : outputs.Tf) {
-        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
-        std::cout << output << "\n";
+    for (double output : outputs.Tout) {
+        std::cout << "Tout for timestep " << i << " is " << output << std::endl;
         ++i;
     }
-    return 0;
+//    // Output print function
+//    std::cout << " " << std::endl;
+//    std::cout << "MTF" << std::endl;
+//    i = 1;
+//    for (double output : outputs.Tf) {
+//        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
+//        std::cout << output << "\n";
+//        ++i;
+//    }
+//    return 0;
 }
