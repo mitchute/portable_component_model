@@ -5,7 +5,6 @@
 #include <cmath>
 #include <iostream>
 #include <numeric>
-#include <string>
 #include <tuple>
 #include <vector>
 #include <fstream>
@@ -316,10 +315,10 @@ double summation(int n, std::vector<double> q_load, std::vector<double> g_data) 
     return total;
 }
 
-double HP(double ghe_out, double bldgload, inital_data inputs ){
+double HP(double ghe_out, double bldgload, inital_data inputs, double HP_config [] ){
     double srcload;
-    if (bldgload > 0) {srcload = bldgload * (1 - (1 / inputs.cop_h));}
-    else {srcload = bldgload * (1 + (1 / inputs.cop_c));}
+    if (bldgload < 0) {srcload = bldgload*(HP_config [0] + HP_config [1]*(ghe_out) + HP_config [2]*(ghe_out*ghe_out));}
+    else {srcload = bldgload*(HP_config [3] + HP_config [4]*(ghe_out) + HP_config [5]*(ghe_out*ghe_out));}
     double T_out_hp = ghe_out - (srcload / (inputs.mdot*inputs.cp));
     return T_out_hp;
 }
@@ -327,6 +326,9 @@ double HP(double ghe_out, double bldgload, inital_data inputs ){
 void main_model() {
 
     inital_data inputs = load_data();
+
+    //Setting up HP configuration
+    double HP_config [] = {1.092440,0.000314,0.000114,0.705459,0.005447,-0.000077};
 
     // Deriving characteristic time
     double alpha_s = inputs.ks/inputs.rcp;
@@ -337,19 +339,23 @@ void main_model() {
     
     // Main Loop
     int n = 0;
-    int m = 100; //num of iterations
+    int m = 8760; //num of iterations
+    double bldgload = -1000.00;
     double qn1, ghe_Tin;
     std::vector<double> ghe_load;
     std::vector<double> ghe_Tout(m), ghe_Tf(m);
     while (n < m) {
 
         // Calculating Inlet temp
-        double bldgload = -1000.00;
+        if (std::remainder(n, 730) == 0) {
+            bldgload = bldgload * -1;
+        }
+
         if (n>0) {
-            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, inputs);
+            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, inputs, HP_config);
         }
         else {
-            ghe_Tin = HP(0, bldgload, inputs);
+            ghe_Tin = HP(0, bldgload, inputs, HP_config);
         }
         // loading g_data
         std::vector<double> g_data = g_expander(inputs.indexed_data, n, ts);
@@ -373,8 +379,8 @@ void main_model() {
 
         // 1.12
         ghe_Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
-        
-        
+
+
         // 1.14
         ghe_Tout[n] = ghe_Tf[n] - 0.5 * ((qn * inputs.H) / (inputs.mdot * inputs.cp));
         outputs << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << ","  << bldgload << "\n";
