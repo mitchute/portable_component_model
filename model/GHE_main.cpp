@@ -1,4 +1,7 @@
 //-------------------SIMPLE MEAN GHE -------------------------------
+
+//Main loop built upon Appendix A of https://shareok.org/handle/11244/323367
+
 #include <cmath>
 #include <iostream>
 #include <numeric>
@@ -11,25 +14,26 @@
 //H - active borehole length (Active length of pipe)
 //Rb - borehole Resistance
 //Ts - soil temp
-//Tout - outlet temp (C)
-//Tf - simple mean of inlet and outlet temps
+//ghe_Tout - GHE outlet temp (C)
+//ghe_Tf - MFT of GHE
 //mdot - mass flow rate
 //cp - specific heat (heat energy required to change temp of material)
 //ks - soil conductivity
-//q_data - heat load data
-//q_out - updated q load data
+//ghe_load - GHE load
 //g_data - tuple with data set of g values from the JSON file and index n
 //path - location of the JSON file
 //lntts - non-dimensionalized time input into g-function (x-axis on plots) from JSON
 //g_func - g values for given lntts values (y-axis on plots) from JSON
 //q_load - load data
-//q_time - time data corresponding to each q_load
+//q_time - time data corresponding to each ghe_load value
 //q_lntts - calculated non-dimensionalized time for q_time
-//n - index value equal to the last position in q_load
+//n - index of main loop
+//m - number of iterations of main loop
 //c1 - history terms
 //c0 - simplification term
-//qn - current heat load
-//q_delta - load delta
+//qn - current GHE load
+//qn1 - previous iteratiuon GHE load
+//q_delta - GHE load delta
 //total - total of summation equation. Defined in function
 //inputs - data structure with inputs read from the JSON file
 //alphas - soil thermal diffusivity (see pg 12 of Mitchell) (also see line 30 of main.py from the repo shared by Matt)
@@ -40,13 +44,6 @@
 //CSV Set up for debugging
 std::ofstream static outputs("../ouputs.csv", std::ofstream::out);
 
-
-// Definition of structures
-//struct output_data {
-//    std::vector<double> Tout; // outlet temperature
-//    std::vector<double> Tf;
-//};
-
 struct inital_data {
     double Ts; // Soil temp
     double cp; // Specific heat (heat energy required to change temp of material)
@@ -54,22 +51,17 @@ struct inital_data {
     double Rb; // Borehole Resistance
     double ks; // Soil conductivity
     double rcp; //Rho cp
-    double mdot; //inlet temp
+    double mdot; //mass flow rate
     double cop_c; //Coefficient of performance chiller
     double cop_h; //Coefficient of performance heater
     std::tuple<std::vector<double>, std::vector<double>> indexed_data;
 };
 
 //---------------------------------------------------
-//Functions definitions: called inside of simple_GHE
+//Function definitions
 //---------------------------------------------------
-// reading data from JSON file
 inital_data load_data() {
     inital_data inputs;
-    //std::string path = "/Users/ryan/Downloads/simpleGHE/simpleGHE/test.json";
-    // json_data.indexed_data needs to have vectors in the following order:
-    // lntts, g_func, q_load
-
     // HARD CODED TEST DATA
 
     std::vector<double> lntts = { -15.22015406,
@@ -237,7 +229,7 @@ inital_data load_data() {
     inputs.ks = 2.0;
     inputs.rcp = 2000000.0;
     inputs.mdot = 0.2;
-    inputs.cop_c = -3;
+    inputs.cop_c = 3;
     inputs.cop_h = 3;
     inputs.indexed_data = indexed_data;
 
@@ -252,22 +244,21 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
     std::vector<double> g_func = std::get<1>(test_data);
     ++n;
 
-    // from length of q_load, build 0 - n integer vector called q_time.
-
+    //Building vector of lntts values
     int q_time[n];
     int k = 0;
     while (k < n) {
         q_time[k] = 3600 * (k + 1);
         ++k;
-    }; // 3600 is used here to convert hourly timesteps to seconds
+    };
 
-    // for each value of q_time calculate ln(t/ts)
     int i = 0;
     double q_lntts[n];
     for (int t : q_time) {
         q_lntts[i] = log(t / ts);
         ++i;
     }
+    //Interpolator
     int j = 0;
     std::vector<double> output_g_values(n);
     for (double lntts_val : q_lntts){
@@ -303,7 +294,7 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
     return g_data;
 }
 
-// eqn 1.11
+// eqn 1.11 from Mitchell Appendix A
 double summation(int n, std::vector<double> q_load, std::vector<double> g_data) {
     double q_delta;
     double total = 0;
@@ -331,20 +322,11 @@ double HP(double ghe_out, double bldgload, inital_data inputs ){
     else {srcload = bldgload * (1 + (1 / inputs.cop_c));}
     double T_out_hp = ghe_out - (srcload / (inputs.mdot*inputs.cp));
     return T_out_hp;
-    //    STEPS:
-    //    1. Take building load from input at t=1
-    //    2. Compute GHE load based using HP model and building load
-    //    3. Compute HP ExFT using first-law energy balance.
-    //    4. Feed GHE model with HP ExFT.
-    //    5. Solve GHE ExFT (HP EFT).
-    //    6. Next timestep
 }
 
 void main_model() {
-    // loading JSON data. In development
-    inital_data inputs = load_data(); // this will be a function that reads and
-                                    // returns the data from the JSON file. See
-                                    // struct json_data for output variable type
+
+    inital_data inputs = load_data();
 
     // Deriving characteristic time
     double alpha_s = inputs.ks/inputs.rcp;
