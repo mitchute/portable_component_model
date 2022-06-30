@@ -36,26 +36,27 @@
 //ts - characteristic time (way to non-dimensionalize the time) see page 12
 //i/j - general purpose indexes
 //gn - g value at index n
-//outputs - function output
 
 //CSV Set up for debugging
-std::ofstream static debugging("../debugging.csv", std::ofstream::out);
+std::ofstream static outputs("../ouputs.csv", std::ofstream::out);
 
 
 // Definition of structures
-struct output_data {
-    std::vector<double> Tout; // outlet temperature
-    std::vector<double> Tf;
-};
+//struct output_data {
+//    std::vector<double> Tout; // outlet temperature
+//    std::vector<double> Tf;
+//};
 
-struct json_data {
+struct inital_data {
     double Ts; // Soil temp
     double cp; // Specific heat (heat energy required to change temp of material)
     double H;  // Active borehole length (Active length of pipe)
     double Rb; // Borehole Resistance
     double ks; // Soil conductivity
     double rcp; //Rho cp
-    double Tin; //inlet temp
+    double mdot; //inlet temp
+    double cop_c; //Coefficient of performance chiller
+    double cop_h; //Coefficient of performance heater
     std::tuple<std::vector<double>, std::vector<double>> indexed_data;
 };
 
@@ -63,8 +64,8 @@ struct json_data {
 //Functions definitions: called inside of simple_GHE
 //---------------------------------------------------
 // reading data from JSON file
-json_data read_json() {
-    json_data input;
+inital_data load_data() {
+    inital_data inputs;
     //std::string path = "/Users/ryan/Downloads/simpleGHE/simpleGHE/test.json";
     // json_data.indexed_data needs to have vectors in the following order:
     // lntts, g_func, q_load
@@ -147,9 +148,7 @@ json_data read_json() {
                                  2.028,
                                  2.275,
                                  3.003};
-//    //Debugging print function
-//    std::cout << "Size of lntts is " << lntts.size() << std::endl;
-//    std::cout << " " << std::endl;
+
     std::vector<double> g_func = {-2.556919564,
         -2.483889186,
         -2.408186285,
@@ -231,16 +230,18 @@ json_data read_json() {
     std::get<0>(indexed_data) = lntts;
     std::get<1>(indexed_data) = g_func;
 
-    input.Ts = 10;
-    input.cp = 4200;
-    input.H = 100;
-    input.Rb = 0.2477;
-    input.ks = 2.0;
-    input.rcp = 2000000.0;
-    input.Tin = 20;
-    input.indexed_data = indexed_data;
+    inputs.Ts = 10;
+    inputs.cp = 4200;
+    inputs.H = 100;
+    inputs.Rb = 0.2477;
+    inputs.ks = 2.0;
+    inputs.rcp = 2000000.0;
+    inputs.mdot = 0.2;
+    inputs.cop_c = -3;
+    inputs.cop_h = 3;
+    inputs.indexed_data = indexed_data;
 
-    return input;
+    return inputs;
 }
 
 // Expanding g data as step function so that it has same length as q_load
@@ -277,7 +278,6 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
         auto lntts_begin = lntts.begin();
         auto lntts_end = lntts.end();
         auto upper_it = std::upper_bound(lntts_begin, lntts_end, lntts_val);
-        // std::cout << *upper_it << "\n";
         if (upper_it == lntts_begin) {
             // Extrapolating beyond the lower bound
             output_g_values[j] = g_func.front();
@@ -325,12 +325,24 @@ double summation(int n, std::vector<double> q_load, std::vector<double> g_data) 
     return total;
 }
 
-/*---------------
-Main function
-----------------*/
-output_data simple_GHE(double mdot) {
+double HP(double ghe_out, double bldgload, inital_data inputs ){
+    double srcload;
+    if (bldgload > 0) {srcload = bldgload * (1 - (1 / inputs.cop_h));}
+    else {srcload = bldgload * (1 + (1 / inputs.cop_c));}
+    double T_out_hp = ghe_out - (srcload / (inputs.mdot*inputs.cp));
+    return T_out_hp;
+    //    STEPS:
+    //    1. Take building load from input at t=1
+    //    2. Compute GHE load based using HP model and building load
+    //    3. Compute HP ExFT using first-law energy balance.
+    //    4. Feed GHE model with HP ExFT.
+    //    5. Solve GHE ExFT (HP EFT).
+    //    6. Next timestep
+}
+
+void main_model() {
     // loading JSON data. In development
-    json_data inputs = read_json(); // this will be a function that reads and
+    inital_data inputs = load_data(); // this will be a function that reads and
                                     // returns the data from the JSON file. See
                                     // struct json_data for output variable type
 
@@ -344,78 +356,57 @@ output_data simple_GHE(double mdot) {
     // Main Loop
     int n = 0;
     int m = 100; //num of iterations
-    std::vector<double> q_load;
-    std::vector<double> Tout(m), Tf(m);
-    double c1, qn, qn1;
+    double qn1, ghe_Tin;
+    std::vector<double> ghe_load;
+    std::vector<double> ghe_Tout(m), ghe_Tf(m);
     while (n < m) {
 
-
+        // Calculating Inlet temp
+        double bldgload = -1000.00;
+        if (n>0) {
+            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, inputs);
+        }
+        else {
+            ghe_Tin = HP(0, bldgload, inputs);
+        }
         // loading g_data
         std::vector<double> g_data = g_expander(inputs.indexed_data, n, ts);
         double gn = g_data[n];
 
         // eqn 1.11
 
-        c1 = (1)*summation(n, q_load, g_data);
+        double c1 = (1)*summation(n, ghe_load, g_data);
 
-        // calculating current load and appending to data
-
-
+//        // calculating current load and appending to data
+//
         if (n>0) {
-            qn1 =  q_load[n-1];
+            qn1 =  ghe_load[n-1];
         }
         else{
             qn1 =  0;
         }
 
-        qn = (inputs.Tin - inputs.Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(inputs.H/(mdot*inputs.cp)))+(gn*c0)+inputs.Rb);
-        q_load.push_back (qn);
-        // Printing to CSV for debugging
-        debugging << n << "," << qn << "," << qn1 << "," << q_load[n-1] << "," << gn << "," << c1 << "," << c0 << "," << inputs.Tin << "," << inputs.Ts << "," << inputs.H << "," << mdot << "," << inputs.cp << "," << inputs.Rb << "\n";
+        double qn = (ghe_Tin - inputs.Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(inputs.H/(inputs.mdot*inputs.cp)))+(gn*c0)+inputs.Rb);
+        ghe_load.push_back (qn);
 
         // 1.12
-        Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
+        ghe_Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
         
         
         // 1.14
-        Tout[n] = Tf[n] - 0.5 * ((qn * inputs.H) / (mdot * inputs.cp));
-
+        ghe_Tout[n] = ghe_Tf[n] - 0.5 * ((qn * inputs.H) / (inputs.mdot * inputs.cp));
+        outputs << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << ","  << bldgload << "\n";
         n++;
     };
 
-    // Writing to structure for export from function:
-    output_data outputs;
-    outputs.Tout = Tout;
-    outputs.Tf = Tf;
-
-    return outputs;
 }
+
 
 int main() {
 
-    debugging << "n" << "," << "qn" << "," << "qn1" << ","  << "q_load[n-1]" << "," << "gn" << "," << "c1" << "," << "c0" << "," << "inputs.Tin" << "," << "inputs.Ts" << "," << "inputs.H" << "," << "mdot" << "," << "inputs.cp" << "," << "inputs.Rb" << "\n";
-
-    double mdot = 0.2;
-    int i;
-    output_data outputs = simple_GHE(mdot);
-
-//    // Output print function
-//    std::cout << " " << std::endl;
-//    i = 1;
-//    for (double output : outputs.Tout) {
-//        //std::cout << "Tout for timestep " << i << " is " << output << std::endl;
-//        std::cout << output << "\n";
-//        ++i;
-//    }
-    // Output print function
-    std::cout << " " << std::endl;
-    std::cout << "MTF" << std::endl;
-    i = 1;
-    for (double output : outputs.Tf) {
-        //std::cout << "Tf for timestep " << i << " is " << output << std::endl;
-        std::cout << output << "\n";
-        ++i;
-    }
+    outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin/HP_Tout" << "," << "ghe_Tout/HP_Tin" <<  "," << "bldgload" << "\n";
+    main_model();
     std::cout << "executed successfully" << std::endl;
     return 0;
 }
+
