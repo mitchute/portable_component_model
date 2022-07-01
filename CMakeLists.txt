@@ -7,6 +7,8 @@ add_library(
         model
         model/model.h
         model/model.cpp
+        model/GHE.h
+        model/GHE_main.cpp
 )
 
 # this is the type of build rules if this was built as a part of EnergyPlus

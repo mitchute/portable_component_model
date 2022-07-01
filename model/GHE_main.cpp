@@ -2,14 +2,17 @@
 
 //Main loop built upon Appendix A of https://shareok.org/handle/11244/323367
 
+#include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <numeric>
 #include <tuple>
 #include <vector>
-#include <fstream>
 
-//Variables (See nomenclature section):
+#include "GHE.h"
+
+// Variables (See nomenclature section):
 //H - active borehole length (Active length of pipe)
 //Rb - borehole Resistance
 //Ts - soil temp
@@ -43,24 +46,12 @@
 //CSV Set up for debugging
 std::ofstream static outputs("../ouputs.csv", std::ofstream::out);
 
-struct inital_data {
-    double Ts; // Soil temp
-    double cp; // Specific heat (heat energy required to change temp of material)
-    double H;  // Active borehole length (Active length of pipe)
-    double Rb; // Borehole Resistance
-    double ks; // Soil conductivity
-    double rcp; //Rho cp
-    double mdot; //mass flow rate
-    double cop_c; //Coefficient of performance chiller
-    double cop_h; //Coefficient of performance heater
-    std::tuple<std::vector<double>, std::vector<double>> indexed_data;
-};
+
 
 //---------------------------------------------------
 //Function definitions
 //---------------------------------------------------
-inital_data load_data() {
-    inital_data inputs;
+void ThisGHE::load_data() {
     // HARD CODED TEST DATA
 
     std::vector<double> lntts = { -15.22015406,
@@ -221,26 +212,25 @@ inital_data load_data() {
     std::get<0>(indexed_data) = lntts;
     std::get<1>(indexed_data) = g_func;
 
-    inputs.Ts = 10;
-    inputs.cp = 4200;
-    inputs.H = 100;
-    inputs.Rb = 0.2477;
-    inputs.ks = 2.0;
-    inputs.rcp = 2000000.0;
-    inputs.mdot = 0.2;
-    inputs.cop_c = 3;
-    inputs.cop_h = 3;
-    inputs.indexed_data = indexed_data;
-
-    return inputs;
+    Ts = 10;
+    cp = 4200;
+    H = 100;
+    Rb = 0.2477;
+    ks = 2.0;
+    rcp = 2000000.0;
+    mdot = 0.2;
+    cop_c = 3;
+    cop_h = 3;
+    indexed_data = indexed_data;
 }
 
 // Expanding g data as step function so that it has same length as q_load
 std::vector<double>
-g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n, double ts) {
+ThisGHE::g_expander(int n, double ts) { // TODO Remove TS and any other args that should live on the class
 
-    std::vector<double> lntts = std::get<0>(test_data);
-    std::vector<double> g_func = std::get<1>(test_data);
+    // TODO: Take out the tuple layer and just store two vectors on the class itself instead of tuple<vec, vec>
+    std::vector<double> lntts = std::get<0>(indexed_data);
+    std::vector<double> g_func = std::get<1>(indexed_data);
     ++n;
 
     //Building vector of lntts values
@@ -294,7 +284,7 @@ g_expander(std::tuple<std::vector<double>, std::vector<double>> test_data, int n
 }
 
 // eqn 1.11 from Mitchell Appendix A
-double summation(int n, std::vector<double> q_load, std::vector<double> g_data) {
+double ThisGHE::summation(int n, std::vector<double> q_load, std::vector<double> g_data) {
     double q_delta;
     double total = 0;
     int i = 0;
@@ -315,27 +305,27 @@ double summation(int n, std::vector<double> q_load, std::vector<double> g_data) 
     return total;
 }
 
-double HP(double ghe_out, double bldgload, inital_data inputs, double HP_config [] ){
+double ThisGHE::HP(double ghe_out, double bldgload, double HP_config [] ){
     double srcload;
     if (bldgload < 0) {srcload = bldgload*(HP_config [0] + HP_config [1]*(ghe_out) + HP_config [2]*(ghe_out*ghe_out));}
     else {srcload = bldgload*(HP_config [3] + HP_config [4]*(ghe_out) + HP_config [5]*(ghe_out*ghe_out));}
-    double T_out_hp = ghe_out - (srcload / (inputs.mdot*inputs.cp));
+    double T_out_hp = ghe_out - (srcload / (mdot*cp));
     return T_out_hp;
 }
 
-void main_model() {
+void ThisGHE::main_model() {
 
-    inital_data inputs = load_data();
+    load_data();
 
     //Setting up HP configuration
     double HP_config [] = {1.092440,0.000314,0.000114,0.705459,0.005447,-0.000077};
 
     // Deriving characteristic time
-    double alpha_s = inputs.ks/inputs.rcp;
-    double ts = pow(inputs.H, 2) / (9 * alpha_s);
+    double alpha_s = ks/rcp;
+    double ts = pow(H, 2) / (9 * alpha_s);
 
     // eqn 1.3
-    double c0 = 1 / (2 * M_PI * inputs.ks);
+    double c0 = 1 / (2 * M_PI * ks);
     
     // Main Loop
     int n = 0;
@@ -352,13 +342,13 @@ void main_model() {
         }
 
         if (n>0) {
-            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, inputs, HP_config);
+            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, HP_config);
         }
         else {
-            ghe_Tin = HP(0, bldgload, inputs, HP_config);
+            ghe_Tin = HP(0, bldgload, HP_config);
         }
         // loading g_data
-        std::vector<double> g_data = g_expander(inputs.indexed_data, n, ts);
+        std::vector<double> g_data = g_expander(n, ts);
         double gn = g_data[n];
 
         // eqn 1.11
@@ -374,26 +364,25 @@ void main_model() {
             qn1 =  0;
         }
 
-        double qn = (ghe_Tin - inputs.Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(inputs.H/(inputs.mdot*inputs.cp)))+(gn*c0)+inputs.Rb);
+        double qn = (ghe_Tin - Ts + ((qn1 * gn)*c0) - (c1*c0))/((0.5*(H/(mdot*cp)))+(gn*c0)+Rb);
         ghe_load.push_back (qn);
 
         // 1.12
-        ghe_Tf[n] = inputs.Ts + c0*(((qn - qn1)*gn) + c1) + qn * inputs.Rb;
+        ghe_Tf[n] = Ts + c0*(((qn - qn1)*gn) + c1) + qn * Rb;
 
 
         // 1.14
-        ghe_Tout[n] = ghe_Tf[n] - 0.5 * ((qn * inputs.H) / (inputs.mdot * inputs.cp));
+        ghe_Tout[n] = ghe_Tf[n] - 0.5 * ((qn * H) / (mdot * cp));
         outputs << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << ","  << bldgload << "\n";
         n++;
     };
 
 }
 
-
 int main() {
-
     outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin/HP_Tout" << "," << "ghe_Tout/HP_Tin" <<  "," << "bldgload" << "\n";
-    main_model();
+    ThisGHE myGHE;
+    myGHE.main_model();
     std::cout << "executed successfully" << std::endl;
     return 0;
 }
