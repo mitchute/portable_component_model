@@ -1,10 +1,10 @@
-#ifndef ANYTHINGYOUWANT
-#define ANYTHINGYOUWANT
+#ifndef GHEh
+#define GHEh
 
 #include <tuple>
 #include <vector>
 
-class ThisGHE {
+class GHE {
     double Ts; // Soil temp
     double cp; // Specific heat (heat energy required to change temp of material)
     double H;  // Active borehole length (Active length of pipe)
@@ -12,19 +12,21 @@ class ThisGHE {
     double ks; // Soil conductivity
     double rcp; //Rho cp
     double mdot; //mass flow rate
-    double cop_c; //Coefficient of performance chiller
-    double cop_h; //Coefficient of performance heater
-    std::tuple<std::vector<double>, std::vector<double>> indexed_data;
-
+    double ts; //Characteristic time
+    double bldgload;
+    std::vector<double> g_func;
+    std::vector<double> lntts;
     std::vector<int> q_time;
+    std::vector<double> q_lntts;
+    std::vector<double> ghe_load;
+    std::vector<double> g_data;
 
     void load_data();
-    std::vector<double> g_expander(int n, double ts);
-    double summation(int n, std::vector<double> q_load, std::vector<double> g_data);
-    double HP(double ghe_out, double bldgload, double HP_config [] );
+    void g_expander(int m);
+    double summation(int n);
+    double HP(double ghe_Tout);
   public:
-    ThisGHE(int finalSizeOfVectorsIAlreadyKnow);
-    void main_model();
+    GHE(int m);
+    void main_model(int m);
 };
-
 #endif

@@ -9,7 +9,6 @@
 #include <numeric>
 #include <tuple>
 #include <vector>
-
 #include "GHE.h"
 
 // Variables (See nomenclature section):
@@ -43,17 +42,21 @@
 //i/j - general purpose indexes
 //gn - g value at index n
 
-//CSV Set up for debugging
+//CSV Set up
 std::ofstream static outputs("../ouputs.csv", std::ofstream::out);
+//CSV debuggingSet up
+std::ofstream static debug_outputs("../debugging.csv", std::ofstream::out);
 
-ThisGHE::ThisGHE(int finalSizeOfVectorsIAlreadyKnow) {  // TODO: Pass in relevant simulation data parameters to determine final size inside here
-    q_time.reserve(finalSizeOfVectorsIAlreadyKnow);
-}
+//TODO: Work to get all functions shorter than 20-25 lines. Anything bigger than that needs to be broken into smaller functions
+//TODO: Make sure function names are super super clear, allows people to read the code and see exactly what is happening
 
-void ThisGHE::load_data() { // TODO: Eventually the load_data function guts probably just go into the constructor function
-    // HARD CODED TEST DATA
 
-    std::vector<double> lntts = { -15.22015406,
+GHE::GHE(int m) {
+    q_time.reserve(m);
+    q_lntts.reserve(m);
+    ghe_load.reserve(m);
+    g_data.reserve(m);
+    lntts = { -15.22015406,
                                  -15.08300806,
                                  -14.94586206,
                                  -14.80871605,
@@ -130,7 +133,7 @@ void ThisGHE::load_data() { // TODO: Eventually the load_data function guts prob
                                  2.275,
                                  3.003};
 
-    std::vector<double> g_func = {-2.556919564,
+    g_func = {-2.556919564,
         -2.483889186,
         -2.408186285,
         -2.329364731,
@@ -207,9 +210,6 @@ void ThisGHE::load_data() { // TODO: Eventually the load_data function guts prob
         6.306229149,
         6.313183067,
         6.324383675};
-    std::tuple<std::vector<double>, std::vector<double>> indexed_data;
-    std::get<0>(indexed_data) = lntts;
-    std::get<1>(indexed_data) = g_func;
 
     Ts = 10;
     cp = 4200;
@@ -218,76 +218,49 @@ void ThisGHE::load_data() { // TODO: Eventually the load_data function guts prob
     ks = 2.0;
     rcp = 2000000.0;
     mdot = 0.2;
-    cop_c = 3;
-    cop_h = 3;
-    indexed_data = indexed_data;
+    bldgload = -1000;
+    // Deriving characteristic time
+    ts = pow(H, 2) / (9 * (ks/rcp));
 }
 
 // Expanding g data as step function so that it has same length as q_load
-std::vector<double>
-ThisGHE::g_expander(int n, double ts) { // TODO Remove TS and any other args that should live on the class
-
-    // TODO: Take out the tuple layer and just store two vectors on the class itself instead of tuple<vec, vec>
-    std::vector<double> lntts = std::get<0>(indexed_data);
-    std::vector<double> g_func = std::get<1>(indexed_data);
-    ++n;
-
-    // TODO: On the class, declare a vector std::vector<int> q_time;
-    // TODO: In the load_data function, or the class constructor once we get there, try to reserve the vector once
-    // TODO: q_time.reserve(the actual, or estimated, final size of the vector);
-    // TODO: Then in this function, each time you come in, do a q_time.push_back(new_value);
-    //Building vector of lntts values
-    int q_time[n];
-    int k = 0;
-    while (k < n) {
-        q_time[k] = 3600 * (k + 1);
-        ++k;
-    };
-
-    int i = 0;
-    double q_lntts[n];
-    for (int t : q_time) {
-        q_lntts[i] = log(t / ts);
-        ++i;
-    }
-    //Interpolator
-    int j = 0;
-    std::vector<double> output_g_values(n);
-    for (double lntts_val : q_lntts){
+void GHE::g_expander(int m) {
+    int n = 0;
+    while (n < m) {
+        // Building vector of lntts values
+        q_time.push_back(3600 * n);
+        q_lntts.push_back(log(q_time[n] / ts));
+        // Interpolator
         // Assuming x and y are equal length - this should be caught upon initialization
-        // Assuming x and y have at least 2 elements
-        // Assuming x is monotonic
+        //  Assuming x and y have at least 2 elements
+        //  Assuming x is monotonic
 
         auto lntts_begin = lntts.begin();
         auto lntts_end = lntts.end();
-        auto upper_it = std::upper_bound(lntts_begin, lntts_end, lntts_val);
+        auto upper_it = std::upper_bound(lntts_begin, lntts_end, q_lntts[n]);
         if (upper_it == lntts_begin) {
             // Extrapolating beyond the lower bound
-            output_g_values[j] = g_func.front();
-            }
-        else if (upper_it == lntts_end) {
+            g_data.push_back(g_func.front());
+        } else if (upper_it == lntts_end) {
             // Extrapolating beyond the upper bound
-            output_g_values[j] = g_func.back();
-            }
-        else{
+            g_data.push_back(g_func.back());
+        } else {
             int u_idx = std::distance(lntts.begin(), upper_it);
             int l_idx = u_idx - 1;
             double lntts_low = lntts[l_idx];
             double lntts_high = lntts[u_idx];
             double g_func_low = g_func[l_idx];
             double g_func_high = g_func[u_idx];
-            output_g_values[j] = (lntts_val - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
-            }
-        ++j;
+            double g_temp = (q_lntts[n] - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
+            g_data.push_back(g_temp);
+            debug_outputs << n << "," << g_data[n] << "," << q_lntts[n] << "," << q_time[n] << "\n";
+        }
+        ++n;
     }
-
-    // Write data to g_data structure and return
-    std::vector<double> g_data = output_g_values;
-    return g_data;
 }
 
 // eqn 1.11 from Mitchell Appendix A
-double ThisGHE::summation(int n, std::vector<double> q_load, std::vector<double> g_data) {
+double GHE::summation(int n) {
     double q_delta;
     double total = 0;
     int i = 0;
@@ -295,9 +268,9 @@ double ThisGHE::summation(int n, std::vector<double> q_load, std::vector<double>
     if (n !=0) {
         while (i < n) {
             if (i == 0) {
-                q_delta = q_load[i] - 0;
+                q_delta = ghe_load[i] - 0;
             } else {
-                q_delta = q_load[i] - q_load[i - 1];
+                q_delta = ghe_load[i] - ghe_load[i - 1];
             }
             // eqn 1.11
             total = total + (q_delta * g_data[j]);
@@ -308,58 +281,47 @@ double ThisGHE::summation(int n, std::vector<double> q_load, std::vector<double>
     return total;
 }
 
-double ThisGHE::HP(double ghe_out, double bldgload, double HP_config [] ){
+double GHE::HP(double ghe_Tout_n){
     double srcload;
-    if (bldgload < 0) {srcload = bldgload*(HP_config [0] + HP_config [1]*(ghe_out) + HP_config [2]*(ghe_out*ghe_out));}
-    else {srcload = bldgload*(HP_config [3] + HP_config [4]*(ghe_out) + HP_config [5]*(ghe_out*ghe_out));}
-    double T_out_hp = ghe_out - (srcload / (mdot*cp));
+    double HP_config [] = {1.092440,0.000314,0.000114,0.705459,0.005447,-0.000077};
+    if (bldgload < 0) {srcload = bldgload*(HP_config [0] + HP_config [1]*(ghe_Tout_n) + HP_config [2]*(ghe_Tout_n*ghe_Tout_n));}
+    else {srcload = bldgload*(HP_config [3] + HP_config [4]*(ghe_Tout_n) + HP_config [5]*(ghe_Tout_n*ghe_Tout_n));}
+    double T_out_hp = ghe_Tout_n - (srcload / (mdot*cp));
     return T_out_hp;
 }
 
-void ThisGHE::main_model() {
-
-    load_data();
-
-    //Setting up HP configuration
-    double HP_config [] = {1.092440,0.000314,0.000114,0.705459,0.005447,-0.000077};
-
-    // Deriving characteristic time
-    double alpha_s = ks/rcp;
-    double ts = pow(H, 2) / (9 * alpha_s);
-
+void GHE::main_model(int m) {
+    
     // eqn 1.3
     double c0 = 1 / (2 * M_PI * ks);
+
+    //Interpolating g_data
+    g_expander(m);
     
     // Main Loop
     int n = 0;
-    int m = 8760; //num of iterations
-    double bldgload = -1000.00;
     double qn1, ghe_Tin;
-    std::vector<double> ghe_load;
     std::vector<double> ghe_Tout(m), ghe_Tf(m);
     while (n < m) {
-
         // Calculating Inlet temp
         if (std::remainder(n, 730) == 0) {
             bldgload = bldgload * -1;
         }
-
         if (n>0) {
-            ghe_Tin = HP(ghe_Tout[n - 1], bldgload, HP_config);
+            ghe_Tin = HP(ghe_Tout[n - 1]);
         }
         else {
-            ghe_Tin = HP(0, bldgload, HP_config);
+            ghe_Tin = HP(0);
         }
         // loading g_data
-        std::vector<double> g_data = g_expander(n, ts);
         double gn = g_data[n];
 
         // eqn 1.11
 
-        double c1 = (1)*summation(n, ghe_load, g_data);
+        double c1 = (1)*summation(n);
 
-//        // calculating current load and appending to data
-//
+        // calculating current load and appending to data
+
         if (n>0) {
             qn1 =  ghe_load[n-1];
         }
@@ -383,9 +345,11 @@ void ThisGHE::main_model() {
 }
 
 int main() {
-    outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin/HP_Tout" << "," << "ghe_Tout/HP_Tin" <<  "," << "bldgload" << "\n";
-    ThisGHE myGHE(8760);  // TODO: This would actually pass like, num_time_steps, or something else.
-    myGHE.main_model();
-    std::cout << "executed successfully" << std::endl;
+    outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin (HP_Tout)" << "," << "ghe_Tout (HP_Tin)" <<  "," << "bldgload" << "\n";
+    debug_outputs << "n" << "," << "g_data[n]" << "," << "q_lntts[n]" << "," << "q_time[n]" << "\n";
+    int num_time_steps = 8760;  //num of iterations
+    GHE GHE(num_time_steps);
+    GHE.main_model(num_time_steps);
+    std::cout << "Executed successfully" << std::endl;
     return 0;
 }
