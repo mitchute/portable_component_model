@@ -16,11 +16,14 @@ class ThisGHE {
     double cop_h; //Coefficient of performance heater
     std::tuple<std::vector<double>, std::vector<double>> indexed_data;
 
+    std::vector<int> q_time;
+
     void load_data();
     std::vector<double> g_expander(int n, double ts);
     double summation(int n, std::vector<double> q_load, std::vector<double> g_data);
     double HP(double ghe_out, double bldgload, double HP_config [] );
   public:
+    ThisGHE(int finalSizeOfVectorsIAlreadyKnow);
     void main_model();
 };
 

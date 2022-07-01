@@ -46,12 +46,11 @@
 //CSV Set up for debugging
 std::ofstream static outputs("../ouputs.csv", std::ofstream::out);
 
+ThisGHE::ThisGHE(int finalSizeOfVectorsIAlreadyKnow) {  // TODO: Pass in relevant simulation data parameters to determine final size inside here
+    q_time.reserve(finalSizeOfVectorsIAlreadyKnow);
+}
 
-
-//---------------------------------------------------
-//Function definitions
-//---------------------------------------------------
-void ThisGHE::load_data() {
+void ThisGHE::load_data() { // TODO: Eventually the load_data function guts probably just go into the constructor function
     // HARD CODED TEST DATA
 
     std::vector<double> lntts = { -15.22015406,
@@ -233,6 +232,10 @@ ThisGHE::g_expander(int n, double ts) { // TODO Remove TS and any other args tha
     std::vector<double> g_func = std::get<1>(indexed_data);
     ++n;
 
+    // TODO: On the class, declare a vector std::vector<int> q_time;
+    // TODO: In the load_data function, or the class constructor once we get there, try to reserve the vector once
+    // TODO: q_time.reserve(the actual, or estimated, final size of the vector);
+    // TODO: Then in this function, each time you come in, do a q_time.push_back(new_value);
     //Building vector of lntts values
     int q_time[n];
     int k = 0;
@@ -381,9 +384,8 @@ void ThisGHE::main_model() {
 
 int main() {
     outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin/HP_Tout" << "," << "ghe_Tout/HP_Tin" <<  "," << "bldgload" << "\n";
-    ThisGHE myGHE;
+    ThisGHE myGHE(8760);  // TODO: This would actually pass like, num_time_steps, or something else.
     myGHE.main_model();
     std::cout << "executed successfully" << std::endl;
     return 0;
 }
-
