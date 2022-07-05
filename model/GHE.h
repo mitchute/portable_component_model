@@ -6,13 +6,13 @@
 #include <vector>
 
 class GHE {
-    double Ts;   // Soil temp
-    double cp;   // Specific heat (heat energy required to change temp of material)
-    double H;    // Active borehole length (Active length of pipe)
-    double Rb;   // Borehole Resistance
-    double ks;   // Soil conductivity
-    double rcp;  // Rho cp
-    double ts;   // Characteristic time
+    double Ts;  // Soil temp
+    double cp;  // Specific heat (heat energy required to change temp of material)
+    double H;   // Active borehole length (Active length of pipe)
+    double Rb;  // Borehole Resistance
+    double ks;  // Soil conductivity
+    double rcp; // Rho cp
+    double ts;  // Characteristic time
     double bldgload;
     std::vector<double> g_func;
     std::vector<double> lntts;
