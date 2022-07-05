@@ -8,7 +8,7 @@ add_library(
         model/model.h
         model/model.cpp
         model/GHE.h
-        model/GHE_main.cpp
+        model/GHE.cpp
 )
 
 # this is the type of build rules if this was built as a part of EnergyPlus
@@ -22,11 +22,22 @@ add_executable(
         energyplus/EnergyPlus.cc
 )
 
-# this is the type of build rules if this was built as a part of EnergyPlus
+# simple_GHE is also a standalone executable that reads a JSON blob and runs the GHE
 add_executable(
         simple_ghe
-        model/GHE_main.cpp
+        model/GHE.cpp
 )
+
+# there's also the unit tests for the model itself
+add_executable(
+        model_test
+        test/doctest.h
+        test/main_test.cpp
+        test/GHE.unit.cpp
+        test/model.unit.cpp
+)
+target_link_libraries(model_test model)
+target_include_directories(model_test PRIVATE "${PROJECT_SOURCE_DIR}/model")
 
 # this is the type of build rules if this was built as an FMU
 # ...
