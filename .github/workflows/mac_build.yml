@@ -31,7 +31,7 @@ jobs:
       run: tree build/
 
     - name: Run Unit Tests
-      run: build/model_tests
+      run: build/model_test
 
     - name: Run EnergyPlus
       run: build/mock_energyplus

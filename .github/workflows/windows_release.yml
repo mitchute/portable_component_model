@@ -23,7 +23,7 @@ jobs:
       run: cmake --build . -j 2 --config Release
 
     - name: Run Unit Tests
-      run: build/Release/model_tests.exe
+      run: build/Release/model_test.exe
 
     - name: Run EnergyPlus
       run: build/Release/mock_energyplus.exe
