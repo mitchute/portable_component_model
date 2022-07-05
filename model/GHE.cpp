@@ -155,6 +155,11 @@ double GHE::HP(double ghe_Tout_n) const {
 
 void GHE::main_model(int m) {
 
+// note that math.h is not required to define the M_PI macro, and Windows does not define it, so just define it here if needed
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
     // eqn 1.3
     double c0 = 1 / (2 * M_PI * ks);
 
