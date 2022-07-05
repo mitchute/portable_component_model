@@ -1,6 +1,7 @@
 project(PortableComponentModel)
 cmake_minimum_required(VERSION 3.17)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)  # export ALL function definitions from DLL, which triggers building the lib file
 
 # this is the type of build rules if the model is built as a standalone library
 add_library(model SHARED
