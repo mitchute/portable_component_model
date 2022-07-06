@@ -13,6 +13,7 @@ class GHE {
     double ks;  // Soil conductivity
     double rcp; // Rho cp
     double ts;  // Characteristic time
+    double c0;  // Simplification term
     double bldgload;
     std::vector<double> g_func;
     std::vector<double> lntts;
@@ -20,16 +21,17 @@ class GHE {
     std::vector<double> q_lntts;
     std::vector<double> ghe_load;
     std::vector<double> g_data;
+    std::vector<double> ghe_Tout;
+    std::vector<double> ghe_Tf;
     void g_expander(int m);
     double summation(int n);
-    [[nodiscard]] double HP(double ghe_Tout) const;
+    [[nodiscard]] double HeatPump(double ghe_Tout) const;
     std::ostream *out;
-    std::ostream *debug;
 
   public:
     double mdot; // mass flow rate
 
-    explicit GHE(std::ostream *main_output, std::ostream *debug_output, int m);
+    explicit GHE(std::ostream *main_output, int m);
     void main_model(int m);
 };
 #endif

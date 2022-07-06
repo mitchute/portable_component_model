@@ -5,10 +5,8 @@
 #include "GHE.h"
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <tuple>
-#include <vector>
 
 // Variables (See nomenclature section):
 // H - active borehole length (Active length of pipe)
@@ -20,10 +18,8 @@
 // cp - specific heat (heat energy required to change temp of material)
 // ks - soil conductivity
 // ghe_load - GHE load
-// g_data - tuple with data set of g values from the JSON file and index n
-// path - location of the JSON file
-// lntts - non-dimensionalized time input into g-function (x-axis on plots) from JSON
-// g_func - g values for given lntts values (y-axis on plots) from JSON
+// lntts - non-dimensionalized time input into g-function (x-axis on plots)
+// g_func - g values for given lntts values (y-axis on plots)
 // q_load - load data
 // q_time - time data corresponding to each ghe_load value
 // q_lntts - calculated non-dimensionalized time for q_time
@@ -32,7 +28,7 @@
 // c1 - history terms
 // c0 - simplification term
 // qn - current GHE load
-// qn1 - previous iteratiuon GHE load
+// qn1 - previous iteration GHE load
 // q_delta - GHE load delta
 // total - total of summation equation. Defined in function
 // inputs - data structure with inputs read from the JSON file
@@ -41,16 +37,15 @@
 // i/j - general purpose indexes
 // gn - g value at index n
 
-// TODO: Work to get all functions shorter than 20-25 lines. Anything bigger than that needs to be broken into smaller functions
-// TODO: Make sure function names are super super clear, allows people to read the code and see exactly what is happening
-
-GHE::GHE(std::ostream *main_output, std::ostream *debug_output, int m) {
+GHE::GHE(std::ostream *main_output, int m) {
     out = main_output;
-    debug = debug_output;
     q_time.reserve(m);
     q_lntts.reserve(m);
     ghe_load.reserve(m);
     g_data.reserve(m);
+    ghe_Tout.reserve(m);
+    ghe_Tf.reserve(m);
+
     lntts = {-15.22015406, -15.08300806, -14.94586206, -14.80871605, -14.67157005, -14.53442405, -14.39727805, -14.26013205, -14.12298605,
              -13.98584005, -13.84869405, -13.71154804, -13.57440204, -13.43725604, -13.30011004, -13.16296404, -13.02581804, -12.88867204,
              -12.75152604, -12.61438004, -12.47723403, -12.34008803, -12.20294203, -12.06579603, -11.92865003, -11.79150403, -11.65435803,
@@ -79,8 +74,17 @@ GHE::GHE(std::ostream *main_output, std::ostream *debug_output, int m) {
     rcp = 2000000.0;
     mdot = 0.2;
     bldgload = -1000;
+
+// Defining c0
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+    c0 = 1 / (2 * M_PI * ks);
+
     // Deriving characteristic time
     ts = pow(H, 2) / (9 * (ks / rcp));
+    // Creating interpolated g dataset
+    g_expander(m);
 }
 
 // Expanding g data as step function so that it has same length as q_load
@@ -113,13 +117,12 @@ void GHE::g_expander(int m) {
             double g_func_high = g_func[u_idx];
             double g_temp = (q_lntts[n] - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
             g_data.push_back(g_temp);
-            *debug << n << "," << g_data[n] << "," << q_lntts[n] << "," << q_time[n] << "\n";
         }
         ++n;
     }
 }
 
-// eqn 1.11 from Mitchell Appendix A
+// Summation eqn 1.11 from Mitchell Appendix A
 double GHE::summation(int n) {
     double q_delta;
     double total = 0;
@@ -141,7 +144,7 @@ double GHE::summation(int n) {
     return total;
 }
 
-double GHE::HP(double ghe_Tout_n) const {
+double GHE::HeatPump(double ghe_Tout_n) const {
     double srcload;
     double HP_config[] = {1.092440, 0.000314, 0.000114, 0.705459, 0.005447, -0.000077};
     if (bldgload < 0) {
@@ -153,57 +156,42 @@ double GHE::HP(double ghe_Tout_n) const {
     return T_out_hp;
 }
 
-void GHE::main_model(int m) {
-
-// note that math.h is not required to define the M_PI macro, and Windows does not define it, so just define it here if needed
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-    // eqn 1.3
-    double c0 = 1 / (2 * M_PI * ks);
-
-    // Interpolating g_data
-    g_expander(m);
-
+void GHE::main_model(int n) {
     // Main Loop
-    int n = 0;
     double qn1, ghe_Tin;
-    std::vector<double> ghe_Tout(m), ghe_Tf(m);
-    while (n < m) {
-        // Calculating Inlet temp
-        if (std::remainder(n, 730) == 0) {
-            bldgload = bldgload * -1;
-        }
-        if (n > 0) {
-            ghe_Tin = HP(ghe_Tout[n - 1]);
-        } else {
-            ghe_Tin = HP(0);
-        }
-        // loading g_data
-        double gn = g_data[n];
-
-        // eqn 1.11
-
-        double c1 = (1) * summation(n);
-
-        // calculating current load and appending to data
-
-        if (n > 0) {
-            qn1 = ghe_load[n - 1];
-        } else {
-            qn1 = 0;
-        }
-
-        double qn = (ghe_Tin - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mdot * cp))) + (gn * c0) + Rb);
-        ghe_load.push_back(qn);
-
-        // 1.12
-        ghe_Tf[n] = Ts + c0 * (((qn - qn1) * gn) + c1) + qn * Rb;
-
-        // 1.14
-        ghe_Tout[n] = ghe_Tf[n] - 0.5 * ((qn * H) / (mdot * cp));
-        *out << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << "," << bldgload << "\n";
-        n++;
+    // Calculating Inlet temp
+    if (std::remainder(n, 730) == 0) {
+        bldgload = bldgload * -1;
     }
+    if (n > 0) {
+        ghe_Tin = HeatPump(ghe_Tout[n - 1]);
+    } else {
+        ghe_Tin = HeatPump(0);
+    }
+    // loading g_data
+    double gn = g_data[n];
+
+    // eqn 1.11
+
+    double c1 = (1) * summation(n);
+
+    // calculating current load and appending to data
+
+    if (n > 0) {
+        qn1 = ghe_load[n - 1];
+    } else {
+        qn1 = 0;
+    }
+
+    double qn = (ghe_Tin - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mdot * cp))) + (gn * c0) + Rb);
+    ghe_load.push_back(qn);
+
+    // 1.12
+    double Tf = Ts + c0 * (((qn - qn1) * gn) + c1) + qn * Rb;
+    ghe_Tf.push_back(Tf);
+
+    // 1.14
+    double Tout = ghe_Tf[n] - 0.5 * ((qn * H) / (mdot * cp));
+    ghe_Tout.push_back(Tout);
+    *out << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << "," << bldgload << "\n";
 }

@@ -9,7 +9,7 @@ int main() {
 
     // Create the GHE model
     int num_time_steps = 8760;  //num of iterations
-    GHE ghe(&outputs, &debug_outputs, num_time_steps);
+    GHE ghe(&outputs, num_time_steps);
     outputs << "n" << "," << "GHE Load" << "," << "ghe_Tin (HP_Tout)" << "," << "ghe_Tout (HP_Tin)" <<  "," << "bldgload" << "\n";
     debug_outputs << "n" << "," << "g_data[n]" << "," << "q_lntts[n]" << "," << "q_time[n]" << "\n";
 
