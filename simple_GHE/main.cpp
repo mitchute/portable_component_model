@@ -14,7 +14,7 @@ int main() {
     debug_outputs << "n" << "," << "g_data[n]" << "," << "q_lntts[n]" << "," << "q_time[n]" << "\n";
 
     // Run the model
-    ghe.main_model(num_time_steps);
+    ghe.main_model(num_time_steps, 0.0);
     std::cout << "Executed successfully" << std::endl;
     return 0;
 }

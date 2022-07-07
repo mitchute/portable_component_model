@@ -4,9 +4,9 @@
 
 #include "GHE.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
-#include <tuple>
 
 // Variables (See nomenclature section):
 // H - active borehole length (Active length of pipe)
@@ -37,8 +37,22 @@
 // i/j - general purpose indexes
 // gn - g value at index n
 
-GHE::GHE(std::ostream *main_output, int m) {
-    out = main_output;
+HeatPump::HeatPump(std::array<double, 3> heating_coefficients, std::array<double, 3> cooling_coefficients) {
+    heating = heating_coefficients;
+    cooling = cooling_coefficients;
+}
+
+void HeatPump::operate(double inlet_temperature, double operating_flow_rate, double building_load) {
+    double source_side_load;
+    if (building_load < 0) {
+        source_side_load = building_load * (heating[0] + heating[1] * (inlet_temperature) + heating[2] * (inlet_temperature * inlet_temperature));
+    } else {
+        source_side_load = building_load * (cooling[3] + cooling[4] * (inlet_temperature) + cooling[5] * (inlet_temperature * inlet_temperature));
+    }
+    outlet_temperature = inlet_temperature - (source_side_load / (operating_flow_rate * specific_heat));
+}
+
+GHE::GHE(int m) {  // TODO: Rename m to something meaningful
     q_time.reserve(m);
     q_lntts.reserve(m);
     ghe_load.reserve(m);
@@ -72,16 +86,9 @@ GHE::GHE(std::ostream *main_output, int m) {
     Rb = 0.2477;
     ks = 2.0;
     rcp = 2000000.0;
-    mdot = 0.2;
-    bldgload = -1000;
-    qn = 0;
-    qn1 = 0;
 
-// Defining c0
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-    c0 = 1 / (2 * M_PI * ks);
+    double constexpr pi = 3.14159265358979323846;
+    c0 = 1 / (2 * pi * ks);
 
     // Deriving characteristic time
     ts = pow(H, 2) / (9 * (ks / rcp));
@@ -150,43 +157,22 @@ double GHE::summation(int n) {
     return total;
 }
 
-double GHE::HeatPump(double ghe_Tout_n) const {
-    double srcload;
-    double HP_config[] = {1.092440, 0.000314, 0.000114, 0.705459, 0.005447, -0.000077};
-    if (bldgload < 0) {
-        srcload = bldgload * (HP_config[0] + HP_config[1] * (ghe_Tout_n) + HP_config[2] * (ghe_Tout_n * ghe_Tout_n));
-    } else {
-        srcload = bldgload * (HP_config[3] + HP_config[4] * (ghe_Tout_n) + HP_config[5] * (ghe_Tout_n * ghe_Tout_n));
-    }
-    double T_out_hp = ghe_Tout_n - (srcload / (mdot * cp));
-    return T_out_hp;
-}
-
-void GHE::main_model(int n) {
-    // Main Loop
-    // Calculating Inlet temp
-    if (std::remainder(n, 730) == 0) {
-        bldgload = bldgload * -1;
-    }
-    if (n > 0) {
-        ghe_Tin = HeatPump(ghe_Tout[n - 1]);
-    } else {
-        ghe_Tin = HeatPump(0);
-    }
+// TODO: Give n a nicer name.  Is it the time step number or is it simulation time?  Depending on the answer, it might be worth modifying the argument
+void GHE::simulate(int n, double ghe_inlet_temperature, double mass_flow_rate) {
     // loading g_data
     double gn = g_data[n];
 
     // eqn 1.11
-
     double c1 = summation(n);
 
     // calculating current load and appending to data
-
+    double qn1 = 0.0;
     if (n > 0) {
         qn1 = ghe_load[n - 1];
     }
+    double qn = 0.0;
     if (n > 0) {
-        qn = (ghe_Tin - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mdot * cp))) + (gn * c0) + Rb);
+        qn = (ghe_inlet_temperature - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mass_flow_rate * cp))) + (gn * c0) + Rb);
     }
     ghe_load.push_back(qn);
 
@@ -195,7 +181,6 @@ void GHE::main_model(int n) {
     ghe_Tf.push_back(Tf);
 
     // 1.14
-    double Tout = ghe_Tf[n] - 0.5 * ((qn * H) / (mdot * cp));
+    double Tout = ghe_Tf[n] - 0.5 * ((qn * H) / (mass_flow_rate * cp));
     ghe_Tout.push_back(Tout);
-    *out << n << "," << qn << "," << ghe_Tin << "," << Tout << "," << Tf << "," << bldgload << "\n";
 }
