@@ -15,6 +15,10 @@ class GHE {
     double ts;  // Characteristic time
     double c0;  // Simplification term
     double bldgload;
+    double qn;
+    double qn1;
+    double ghe_Tin;
+
     std::vector<double> g_func;
     std::vector<double> lntts;
     std::vector<int> q_time;

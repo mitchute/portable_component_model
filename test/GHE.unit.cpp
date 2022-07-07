@@ -18,6 +18,8 @@ TEST_CASE("Test the GHE Model") {
             << ","
             << "ghe_Tout (HP_Tin)"
             << ","
+            << "MFT"
+            << ","
             << "bldgload"
             << "\n";
 

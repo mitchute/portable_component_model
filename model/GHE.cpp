@@ -74,6 +74,8 @@ GHE::GHE(std::ostream *main_output, int m) {
     rcp = 2000000.0;
     mdot = 0.2;
     bldgload = -1000;
+    qn = 0;
+    qn1 = 0;
 
 // Defining c0
 #ifndef M_PI
@@ -92,8 +94,9 @@ void GHE::g_expander(int m) {
     int n = 0;
     while (n < m) {
         // Building vector of lntts values
-        q_time.push_back(3600 * n);
+        q_time.push_back(3600 * (n+1));
         q_lntts.push_back(log(q_time[n] / ts));
+
         // Interpolator
         // Assuming x and y are equal length - this should be caught upon initialization
         //  Assuming x and y have at least 2 elements
@@ -105,9 +108,12 @@ void GHE::g_expander(int m) {
         if (upper_it == lntts_begin) {
             // Extrapolating beyond the lower bound
             g_data.push_back(g_func.front());
+            std::cout << "Extrapolating beyond the lower bound n = " << n << "\n";
+            std::cout << g_func.front() << "\n";
         } else if (upper_it == lntts_end) {
             // Extrapolating beyond the upper bound
             g_data.push_back(g_func.back());
+            std::cout << "Extrapolating beyond the upper bound n = " << n << "\n";
         } else {
             auto u_idx = std::distance(lntts.begin(), upper_it);
             auto l_idx = u_idx - 1;
@@ -158,7 +164,6 @@ double GHE::HeatPump(double ghe_Tout_n) const {
 
 void GHE::main_model(int n) {
     // Main Loop
-    double qn1, ghe_Tin;
     // Calculating Inlet temp
     if (std::remainder(n, 730) == 0) {
         bldgload = bldgload * -1;
@@ -173,17 +178,16 @@ void GHE::main_model(int n) {
 
     // eqn 1.11
 
-    double c1 = (1) * summation(n);
+    double c1 = summation(n);
 
     // calculating current load and appending to data
 
     if (n > 0) {
         qn1 = ghe_load[n - 1];
-    } else {
-        qn1 = 0;
     }
-
-    double qn = (ghe_Tin - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mdot * cp))) + (gn * c0) + Rb);
+    if (n > 0) {
+        qn = (ghe_Tin - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mdot * cp))) + (gn * c0) + Rb);
+    }
     ghe_load.push_back(qn);
 
     // 1.12
@@ -193,5 +197,5 @@ void GHE::main_model(int n) {
     // 1.14
     double Tout = ghe_Tf[n] - 0.5 * ((qn * H) / (mdot * cp));
     ghe_Tout.push_back(Tout);
-    *out << n << "," << qn << "," << ghe_Tin << "," << ghe_Tout[n] << "," << bldgload << "\n";
+    *out << n << "," << qn << "," << ghe_Tin << "," << Tout << "," << Tf << "," << bldgload << "\n";
 }
