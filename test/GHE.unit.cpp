@@ -29,6 +29,8 @@ TEST_CASE("Test the GHE Model") {
           << ","
           << "ghe.q_time[n]"
           << ","
+          << "ghe.ghe_load[n]"
+          << ","
           << "ghe.q_lntts[n]"
           << ","
           << "ghe.g_data[n]"
@@ -44,7 +46,7 @@ TEST_CASE("Test the GHE Model") {
     int n = 0;
     while (n < num_time_steps) {
         ghe.main_model(n);
-        debug << ghe.qn << "," << ghe.ghe_Tin << "," << ghe.q_time[n] << "," << ghe.q_lntts[n] << "," << ghe.g_data[n]
+        debug << ghe.qn << "," << ghe.ghe_Tin << "," << ghe.q_time[n] << "," << ghe.ghe_load[n] << "," << ghe.q_lntts[n] << "," << ghe.g_data[n]
               << "," << ghe.ghe_Tout[n] << "," << ghe.ghe_Tf[n] << "," << ghe.c1 << "\n";
         n++;
     }
