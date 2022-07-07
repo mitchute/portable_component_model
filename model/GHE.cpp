@@ -94,7 +94,7 @@ void GHE::g_expander(int m) {
     int n = 0;
     while (n < m) {
         // Building vector of lntts values
-        q_time.push_back(3600 * (n+1));
+        q_time.push_back(3600 * (n + 1));
         q_lntts.push_back(log(q_time[n] / ts));
 
         // Interpolator
@@ -178,7 +178,7 @@ void GHE::main_model(int n) {
 
     // eqn 1.11
 
-    double c1 = summation(n);
+    c1 = summation(n);
 
     // calculating current load and appending to data
 
