@@ -45,15 +45,15 @@ class GHE {
 
   public:
     double outlet_temperature = 0.0;
-    double qn;
+    double qn;  // TODO: How does qn relate to ghe_load
     double ghe_Tin;
     double c1;
     std::vector<int> q_time;
-    std::vector<double> q_lntts;
+    std::vector<double> q_lntts; // TODO: Is this different from the lntts variable?
     std::vector<double> ghe_load;
-    std::vector<double> g_data;
-    std::vector<double> ghe_Tout;
-    std::vector<double> ghe_Tf;
+    std::vector<double> g_data;  // TODO: Is this different from the g_func variable?
+    std::vector<double> ghe_Tout;  // TODO: I'm not sure we actually need to store the history of temperature
+    std::vector<double> ghe_Tf;  // TODO: Same, do we actually need to store this?
 
     explicit GHE(int m);
     void simulate(int m, double ghe_inlet_temperature, double mass_flow_rate);

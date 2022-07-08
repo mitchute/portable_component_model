@@ -61,6 +61,7 @@ TEST_CASE("Test the GHE Model") {
         hp.operate(ghe.outlet_temperature, pump.flow_rate, building_load);
         // Now run the GHE
         ghe.simulate(n, hp.outlet_temperature, pump.flow_rate);
+        // TODO: I have no idea if I got this list merged right, so you should verify the right outputs are coming out
         outputs << n << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.ghe_Tf.back() << ","
                 << building_load << "\n";
         debug << ghe.qn << "," << ghe.ghe_Tin << "," << ghe.q_time[n] << "," << ghe.ghe_load[n] << "," << ghe.q_lntts[n] << "," << ghe.g_data[n]

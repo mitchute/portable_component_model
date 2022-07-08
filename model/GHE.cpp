@@ -4,7 +4,6 @@
 
 #include "GHE.h"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <iostream>
 
@@ -47,7 +46,7 @@ void HeatPump::operate(double inlet_temperature, double operating_flow_rate, dou
     outlet_temperature = inlet_temperature - (source_side_load / (operating_flow_rate * specific_heat));
 }
 
-GHE::GHE(int m) { // TODO: Rename m to something meaningful
+GHE::GHE(int m) { // TODO: Rename m to something meaningful, I wonder if it is needed, or if we can like assume a year's worth of data to start?
     q_time.reserve(m);
     q_lntts.reserve(m);
     ghe_load.reserve(m);
@@ -55,6 +54,7 @@ GHE::GHE(int m) { // TODO: Rename m to something meaningful
     ghe_Tout.reserve(m);
     ghe_Tf.reserve(m);
 
+    // TODO: Might make a worker function for this called calculate_g_functions() that automatically populates these variables
     lntts = {-15.22015406, -15.08300806, -14.94586206, -14.80871605, -14.67157005, -14.53442405, -14.39727805, -14.26013205, -14.12298605,
              -13.98584005, -13.84869405, -13.71154804, -13.57440204, -13.43725604, -13.30011004, -13.16296404, -13.02581804, -12.88867204,
              -12.75152604, -12.61438004, -12.47723403, -12.34008803, -12.20294203, -12.06579603, -11.92865003, -11.79150403, -11.65435803,
@@ -152,7 +152,7 @@ double GHE::summation(int n) {
     return total;
 }
 
-// TODO: Give n a nicer name.  Is it the time step number or is it simulation time?  Depending on the answer, it might be worth modifying the argument
+// TODO: Give "n" a nicer name.  Is it the time step number or is it simulation time?  Depending on the answer, it might be worth modifying the argument
 void GHE::simulate(int n, double ghe_inlet_temperature, double mass_flow_rate) {
     // loading g_data
     double gn = g_data[n];
