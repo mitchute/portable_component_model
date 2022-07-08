@@ -1,6 +1,7 @@
 #ifndef GHEh
 #define GHEh
 
+#include <array>
 #include <fstream>
 #include <tuple>
 #include <vector>
