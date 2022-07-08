@@ -1,12 +1,13 @@
 #include "doctest.h"
-#include <cmath>
 #include <GHE.h>
+#include <cmath>
 #include <sstream>
 
 TEST_CASE("Test the GHE Model") {
     // Setup output streams
     std::stringstream output_string;
     std::ofstream static outputs("../Outputs/outputs.csv", std::ofstream::out);
+    std::ofstream static debug("../Outputs/debug.csv", std::ofstream::out);
 
     // Create the GHE model
     int num_time_steps = 8760; // num of iterations
@@ -22,13 +23,28 @@ TEST_CASE("Test the GHE Model") {
             << ","
             << "bldgload"
             << "\n";
+    debug << "ghe.qn"
+          << ","
+          << "ghe.ghe_Tin"
+          << ","
+          << "ghe.q_time[n]"
+          << ","
+          << "ghe.ghe_load[n]"
+          << ","
+          << "ghe.q_lntts[n]"
+          << ","
+          << "ghe.g_data[n]"
+          << ","
+          << "ghe.ghe_Tout[n]"
+          << ","
+          << "ghe.ghe_Tf[n]"
+          << ","
+          << "ghe.c1"
+          << "\n";
 
     // Get objects for all the components around the loop
     Pump pump;
-    HeatPump hp(
-        {1.092440, 0.000314, 0.000114},
-        {0.705459, 0.005447, -0.000077}
-    );
+    HeatPump hp({1.092440, 0.000314, 0.000114}, {0.705459, 0.005447, -0.000077});
     GHE ghe(num_time_steps);
 
     // Run the model
@@ -45,7 +61,10 @@ TEST_CASE("Test the GHE Model") {
         hp.operate(ghe.outlet_temperature, pump.flow_rate, building_load);
         // Now run the GHE
         ghe.simulate(n, hp.outlet_temperature, pump.flow_rate);
-        outputs << n << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.ghe_Tf.back() << "," << building_load << "\n";
+        outputs << n << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.ghe_Tf.back() << ","
+                << building_load << "\n";
+        debug << ghe.qn << "," << ghe.ghe_Tin << "," << ghe.q_time[n] << "," << ghe.ghe_load[n] << "," << ghe.q_lntts[n] << "," << ghe.g_data[n]
+              << "," << ghe.ghe_Tout[n] << "," << ghe.ghe_Tf[n] << "," << ghe.c1 << "\n";
     }
     CHECK(pump.flow_rate == 0.2);
 }

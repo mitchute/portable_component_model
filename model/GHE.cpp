@@ -37,22 +37,17 @@
 // i/j - general purpose indexes
 // gn - g value at index n
 
-HeatPump::HeatPump(std::array<double, 3> heating_coefficients, std::array<double, 3> cooling_coefficients) {
-    heating = heating_coefficients;
-    cooling = cooling_coefficients;
-}
-
 void HeatPump::operate(double inlet_temperature, double operating_flow_rate, double building_load) {
     double source_side_load;
     if (building_load < 0) {
         source_side_load = building_load * (heating[0] + heating[1] * (inlet_temperature) + heating[2] * (inlet_temperature * inlet_temperature));
     } else {
-        source_side_load = building_load * (cooling[3] + cooling[4] * (inlet_temperature) + cooling[5] * (inlet_temperature * inlet_temperature));
+        source_side_load = building_load * (cooling[0] + cooling[1] * (inlet_temperature) + cooling[2] * (inlet_temperature * inlet_temperature));
     }
     outlet_temperature = inlet_temperature - (source_side_load / (operating_flow_rate * specific_heat));
 }
 
-GHE::GHE(int m) {  // TODO: Rename m to something meaningful
+GHE::GHE(int m) { // TODO: Rename m to something meaningful
     q_time.reserve(m);
     q_lntts.reserve(m);
     ghe_load.reserve(m);
@@ -75,10 +70,10 @@ GHE::GHE(int m) {  // TODO: Rename m to something meaningful
               -0.736728573, -0.609776928, -0.482123413, -0.354322868, -0.226959789, -0.100626916, 0.024099618,  0.146685992,  0.266664496,
               0.383652944,  0.497367798,  0.607629979,  0.714363225,  0.817585782,  0.917396924,  1.013960203,  1.107485466,  1.198211462,
               1.286390425,  1.372275509,  1.456111388,  1.538127898,  1.618536337,  1.697527825,  1.775273191,  1.851923828,  1.927613133,
-              2.002458214,  2.076561654,  2.150013227,  2.222891481,  2.29526516,   2.429306993,  2.776706956,  3.073538762,  3.418085031,
-              3.711170756,  4.049191639,  4.381141145,  4.630139663,  4.941340709,  5.117006771,  5.237526289,  5.401676261,  5.512698806,
-              5.759025737,  5.96747168,   6.024558855,  6.076104037,  6.126494025,  6.16581059,   6.199436891,  6.228510294,  6.252934535,
-              6.271152953,  6.29201203,   6.306229149,  6.313183067,  6.324383675};
+              2.002458214,  2.076561654,  2.150013227,  2.222891481,  2.29526516,   2.776706956,  3.073538762,  3.418085031,  3.711170756,
+              4.049191639,  4.381141145,  4.630139663,  4.941340709,  5.117006771,  5.237526289,  5.401676261,  5.512698806,  5.759025737,
+              5.96747168,   6.024558855,  6.076104037,  6.126494025,  6.16581059,   6.199436891,  6.228510294,  6.252934535,  6.271152953,
+              6.29201203,   6.306229149,  6.313183067,  6.324383675};
 
     Ts = 10;
     cp = 4200;
@@ -99,9 +94,11 @@ GHE::GHE(int m) {  // TODO: Rename m to something meaningful
 // Expanding g data as step function so that it has same length as q_load
 void GHE::g_expander(int m) {
     int n = 0;
+    auto lntts_begin = lntts.begin();
+    auto lntts_end = lntts.end();
     while (n < m) {
         // Building vector of lntts values
-        q_time.push_back(3600 * (n+1));
+        q_time.push_back(3600 * (n + 1));
         q_lntts.push_back(log(q_time[n] / ts));
 
         // Interpolator
@@ -109,8 +106,6 @@ void GHE::g_expander(int m) {
         //  Assuming x and y have at least 2 elements
         //  Assuming x is monotonic
 
-        auto lntts_begin = lntts.begin();
-        auto lntts_end = lntts.end();
         auto upper_it = std::upper_bound(lntts_begin, lntts_end, q_lntts[n]);
         if (upper_it == lntts_begin) {
             // Extrapolating beyond the lower bound
@@ -163,14 +158,14 @@ void GHE::simulate(int n, double ghe_inlet_temperature, double mass_flow_rate) {
     double gn = g_data[n];
 
     // eqn 1.11
-    double c1 = summation(n);
+    c1 = summation(n);
 
     // calculating current load and appending to data
     double qn1 = 0.0;
     if (n > 0) {
         qn1 = ghe_load[n - 1];
     }
-    double qn = 0.0;
+    qn = 0.0;
     if (n > 0) {
         qn = (ghe_inlet_temperature - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mass_flow_rate * cp))) + (gn * c0) + Rb);
     }
