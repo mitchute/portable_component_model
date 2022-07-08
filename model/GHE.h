@@ -7,7 +7,7 @@
 #include <vector>
 
 class Pump {
-    // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow
+    // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
     double fixed_flow_rate = 0.2;
 
   public:
@@ -28,34 +28,32 @@ class HeatPump {
 };
 
 class GHE {
-    // TODO: I would rename all these to meaningful variable names using snake case, i.e. Ts -> soil_temperature
-    double Ts;  // Soil temp
-    double cp;  // Specific heat (heat energy required to change temp of material)
-    double H;   // Active borehole length (Active length of pipe)
-    double Rb;  // Borehole Resistance
-    double ks;  // Soil conductivity
-    double rcp; // Rho cp
-    double ts;  // Characteristic time
+    double soil_temp;
+    double specific_heat;
+    double bh_length;
+    double bh_resistance;
+    double soil_conduct;
+    double rho_cp;
+    double ts;
     double c0;  // Simplification term
 
-    std::vector<double> g_func;
-    std::vector<double> lntts;
-    void g_expander(int m);
-    double summation(int n);
+    std::vector<double> g_func; //g function output values
+    std::vector<double> lntts; //g function input values
+    void g_expander(int num_hours);
+    double summation(int hour);
 
   public:
     double outlet_temperature = 0.0;
+    double Tf;
     double qn;  // TODO: How does qn relate to ghe_load
     double ghe_Tin;
     double c1;
-    std::vector<int> q_time;
-    std::vector<double> q_lntts; // TODO: Is this different from the lntts variable?
+    std::vector<int> hours_as_seconds; // hourly data as seconds
+    std::vector<double> calc_lntts; // Calculated lntts values from num_time_steps
     std::vector<double> ghe_load;
-    std::vector<double> g_data;  // TODO: Is this different from the g_func variable?
-    std::vector<double> ghe_Tout;  // TODO: I'm not sure we actually need to store the history of temperature
-    std::vector<double> ghe_Tf;  // TODO: Same, do we actually need to store this?
+    std::vector<double> interp_g_values;  // Interpolated g values from interp_lntts
 
-    explicit GHE(int m);
-    void simulate(int m, double ghe_inlet_temperature, double mass_flow_rate);
+    explicit GHE(int num_hours);
+    void simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate);
 };
 #endif
