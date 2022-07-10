@@ -164,14 +164,13 @@ void GHE::simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate
     }
     qn = 0.0;
     if (hour > 0) {
-        qn = (ghe_inlet_temperature - soil_temp + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn * c0) + bh_resistance);
+        qn = (ghe_inlet_temperature - soil_temp + ((qn1 * gn) * c0) - (c1 * c0)) /
+             ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn * c0) + bh_resistance);
     }
     ghe_load.push_back(qn);
-
 
     // 1.12
     Tf = soil_temp + c0 * (((qn - qn1) * gn) + c1) + qn * bh_resistance;
     // 1.14
     outlet_temperature = Tf - 0.5 * ((qn * bh_length) / (mass_flow_rate * specific_heat));
-
 }

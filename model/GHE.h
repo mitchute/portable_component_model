@@ -35,23 +35,23 @@ class GHE {
     double soil_conduct;
     double rho_cp;
     double ts;
-    double c0;  // Simplification term
+    double c0; // Simplification term
 
-    std::vector<double> g_func; //g function output values
-    std::vector<double> lntts; //g function input values
+    std::vector<double> g_func; // g function output values
+    std::vector<double> lntts;  // g function input values
     void g_expander(int num_hours);
     double summation(int hour);
 
   public:
     double outlet_temperature = 0.0;
     double Tf;
-    double qn;  // TODO: How does qn relate to ghe_load
+    double qn; // TODO: How does qn relate to ghe_load
     double ghe_Tin;
     double c1;
     std::vector<int> hours_as_seconds; // hourly data as seconds
-    std::vector<double> calc_lntts; // Calculated lntts values from num_time_steps
+    std::vector<double> calc_lntts;    // Calculated lntts values from num_time_steps
     std::vector<double> ghe_load;
-    std::vector<double> interp_g_values;  // Interpolated g values from interp_lntts
+    std::vector<double> interp_g_values; // Interpolated g values from interp_lntts
 
     explicit GHE(int num_hours);
     void simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate);
