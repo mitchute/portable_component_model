@@ -21,17 +21,6 @@ add_executable(mock_energyplus
         energyplus/EnergyPlus.cc
 )
 
-# simple_GHE is also a standalone executable that reads a JSON blob and runs the GHE
-add_executable(simple_ghe
-        simple_GHE/main.cpp
-        simple_GHE/sndbx.cpp
-        # simple_GHE/GHE_q_inputs.cpp
-        # simple_GHE/G_expander_e+.cpp
-        simple_GHE/json.hpp
-)
-target_link_libraries(simple_ghe model)
-target_include_directories(simple_ghe PRIVATE "${PROJECT_SOURCE_DIR}/model")
-
 # there's also the unit tests for the model itself
 add_executable(
         model_test

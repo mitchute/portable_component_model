@@ -38,7 +38,7 @@
 
 void HeatPump::operate(double inlet_temperature, double operating_flow_rate, double building_load) {
     double source_side_load;
-    if (building_load < 0) {
+    if (building_load > 0) {
         source_side_load = building_load * (heating[0] + heating[1] * (inlet_temperature) + heating[2] * (inlet_temperature * inlet_temperature));
     } else {
         source_side_load = building_load * (cooling[0] + cooling[1] * (inlet_temperature) + cooling[2] * (inlet_temperature * inlet_temperature));
@@ -46,15 +46,13 @@ void HeatPump::operate(double inlet_temperature, double operating_flow_rate, dou
     outlet_temperature = inlet_temperature - (source_side_load / (operating_flow_rate * specific_heat));
 }
 
-GHE::GHE(int m) { // TODO: Rename m to something meaningful, I wonder if it is needed, or if we can like assume a year's worth of data to start?
-    q_time.reserve(m);
-    q_lntts.reserve(m);
-    ghe_load.reserve(m);
-    g_data.reserve(m);
-    ghe_Tout.reserve(m);
-    ghe_Tf.reserve(m);
+GHE::GHE(int num_hours) {
+    hours_as_seconds.reserve(num_hours);
+    calc_lntts.reserve(num_hours);
+    ghe_load.reserve(num_hours);
+    interp_g_values.reserve(num_hours);
 
-    // TODO: Might make a worker function for this called calculate_g_functions() that automatically populates these variables
+    // TODO: Make a worker function for this called calculate_g_functions() that automatically populates these variables. Discuss with Matt
     lntts = {-15.22015406, -15.08300806, -14.94586206, -14.80871605, -14.67157005, -14.53442405, -14.39727805, -14.26013205, -14.12298605,
              -13.98584005, -13.84869405, -13.71154804, -13.57440204, -13.43725604, -13.30011004, -13.16296404, -13.02581804, -12.88867204,
              -12.75152604, -12.61438004, -12.47723403, -12.34008803, -12.20294203, -12.06579603, -11.92865003, -11.79150403, -11.65435803,
@@ -75,47 +73,47 @@ GHE::GHE(int m) { // TODO: Rename m to something meaningful, I wonder if it is n
               5.96747168,   6.024558855,  6.076104037,  6.126494025,  6.16581059,   6.199436891,  6.228510294,  6.252934535,  6.271152953,
               6.29201203,   6.306229149,  6.313183067,  6.324383675};
 
-    Ts = 10;
-    cp = 4200;
-    H = 100;
-    Rb = 0.2477;
-    ks = 2.0;
-    rcp = 2000000.0;
+    soil_temp = 10;
+    specific_heat = 4200;
+    bh_length = 100;
+    bh_resistance = 0.2477;
+    soil_conduct = 2.0;
+    rho_cp = 2000000.0;
 
     double constexpr pi = 3.14159265358979323846;
-    c0 = 1 / (2 * pi * ks);
+    c0 = 1 / (2 * pi * soil_conduct);
 
     // Deriving characteristic time
-    ts = pow(H, 2) / (9 * (ks / rcp));
+    ts = pow(bh_length, 2) / (9 * (soil_conduct / rho_cp));
     // Creating interpolated g dataset
-    g_expander(m);
+    g_expander(num_hours);
 }
 
 // Expanding g data as step function so that it has same length as q_load
-void GHE::g_expander(int m) {
+void GHE::g_expander(int num_hours) {
     int n = 0;
     auto lntts_begin = lntts.begin();
     auto lntts_end = lntts.end();
-    while (n < m) {
+    while (n < num_hours) {
         // Building vector of lntts values
-        q_time.push_back(3600 * (n + 1));
-        q_lntts.push_back(log(q_time[n] / ts));
+        hours_as_seconds.push_back(3600 * (n + 1));
+        calc_lntts.push_back(log(hours_as_seconds[n] / ts));
 
         // Interpolator
         // Assuming x and y are equal length - this should be caught upon initialization
         //  Assuming x and y have at least 2 elements
         //  Assuming x is monotonic
 
-        auto upper_it = std::upper_bound(lntts_begin, lntts_end, q_lntts[n]);
+        auto upper_it = std::upper_bound(lntts_begin, lntts_end, calc_lntts[n]);
         if (upper_it == lntts_begin) {
             // Extrapolating beyond the lower bound
-            g_data.push_back(g_func.front());
-            std::cout << "Extrapolating beyond the lower bound n = " << n << "\n";
+            interp_g_values.push_back(g_func.front());
+            std::cout << "Extrapolating beyond the lower bound index = " << n << "\n";
             std::cout << g_func.front() << "\n";
         } else if (upper_it == lntts_end) {
             // Extrapolating beyond the upper bound
-            g_data.push_back(g_func.back());
-            std::cout << "Extrapolating beyond the upper bound n = " << n << "\n";
+            interp_g_values.push_back(g_func.back());
+            std::cout << "Extrapolating beyond the upper bound index = " << n << "\n";
         } else {
             auto u_idx = std::distance(lntts.begin(), upper_it);
             auto l_idx = u_idx - 1;
@@ -123,28 +121,28 @@ void GHE::g_expander(int m) {
             double lntts_high = lntts[u_idx];
             double g_func_low = g_func[l_idx];
             double g_func_high = g_func[u_idx];
-            double g_temp = (q_lntts[n] - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
-            g_data.push_back(g_temp);
+            double g_temp = (calc_lntts[n] - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
+            interp_g_values.push_back(g_temp);
         }
         ++n;
     }
 }
 
 // Summation eqn 1.11 from Mitchell Appendix A
-double GHE::summation(int n) {
+double GHE::summation(int hour) {
     double q_delta;
     double total = 0;
     int i = 0;
-    int j = n;
-    if (n != 0) {
-        while (i < n) {
+    int j = hour;
+    if (hour != 0) {
+        while (i < hour) {
             if (i == 0) {
                 q_delta = ghe_load[i] - 0;
             } else {
                 q_delta = ghe_load[i] - ghe_load[i - 1];
             }
             // eqn 1.11
-            total = total + (q_delta * g_data[j]);
+            total = total + (q_delta * interp_g_values[j]);
             j = j - 1;
             ++i;
         }
@@ -152,30 +150,28 @@ double GHE::summation(int n) {
     return total;
 }
 
-// TODO: Give "n" a nicer name.  Is it the time step number or is it simulation time?  Depending on the answer, it might be worth modifying the argument
-void GHE::simulate(int n, double ghe_inlet_temperature, double mass_flow_rate) {
+void GHE::simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate) {
     // loading g_data
-    double gn = g_data[n];
+    double gn = interp_g_values[hour];
 
     // eqn 1.11
-    c1 = summation(n);
+    c1 = summation(hour);
 
     // calculating current load and appending to data
     double qn1 = 0.0;
-    if (n > 0) {
-        qn1 = ghe_load[n - 1];
+    if (hour > 0) {
+        qn1 = ghe_load[hour - 1];
     }
     qn = 0.0;
-    if (n > 0) {
-        qn = (ghe_inlet_temperature - Ts + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (H / (mass_flow_rate * cp))) + (gn * c0) + Rb);
+    if (hour > 0) {
+        qn = (ghe_inlet_temperature - soil_temp + ((qn1 * gn) * c0) - (c1 * c0)) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn * c0) + bh_resistance);
     }
     ghe_load.push_back(qn);
 
-    // 1.12
-    double Tf = Ts + c0 * (((qn - qn1) * gn) + c1) + qn * Rb;
-    ghe_Tf.push_back(Tf);
 
+    // 1.12
+    Tf = soil_temp + c0 * (((qn - qn1) * gn) + c1) + qn * bh_resistance;
     // 1.14
-    double Tout = ghe_Tf[n] - 0.5 * ((qn * H) / (mass_flow_rate * cp));
-    ghe_Tout.push_back(Tout);
+    outlet_temperature = Tf - 0.5 * ((qn * bh_length) / (mass_flow_rate * specific_heat));
+
 }
