@@ -1,14 +1,12 @@
-debugging.csv
-debugging_excel.xlsx
+debug.csv
 outputs.csv
-ouputs.csv
-outputs_excel.xlsx
 ~$*
 .DS_Store
 
 .idea
 cmake-build-debug
 build
+outputs
 
 # Prerequisites
 *.d

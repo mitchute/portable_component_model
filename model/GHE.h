@@ -45,7 +45,7 @@ class GHE {
   public:
     double outlet_temperature = 0.0;
     double Tf;
-    double qn; // TODO: How does qn relate to ghe_load
+    double current_GHEload;
     double ghe_Tin;
     double c1;
     std::vector<int> hours_as_seconds; // hourly data as seconds

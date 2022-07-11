@@ -67,7 +67,7 @@ TEST_CASE("Test the GHE Model") {
         ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.Tf << ","
                 << building_load << "\n";
-        debug << ghe.qn << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << "," << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour]
+        debug << ghe.current_GHEload << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << "," << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour]
               << "," << ghe.outlet_temperature << "," << ghe.Tf << "," << ghe.c1 << "\n";
     }
     CHECK(pump.flow_rate == 0.2);
