@@ -165,7 +165,7 @@ void GHE::simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate
     current_GHEload = 0.0;
     if (hour > 0) {
         current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn) * c0) - (c1 * c0)) /
-             ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn * c0) + bh_resistance);
+                          ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn * c0) + bh_resistance);
     }
     ghe_load.push_back(current_GHEload);
 
