@@ -1,4 +1,4 @@
-#include <model/model.h>
+#include "model.h"
 
 int LumpedMass::stepForward(float dt, float heatAddition) {
     temperature = temperature + heatAddition * dt / (m * cp);

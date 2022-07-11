@@ -1,6 +1,5 @@
-#include <energyplus/EnergyPlus.hh>
-#include <energyplus/ModelWrapper.hh>
-#include <model/model.h>
+#include "EnergyPlus.hh"
+#include "Model.hh"
 
 int main() {
     MyPlantModel modelInstance(0.0, 1100, 300);
