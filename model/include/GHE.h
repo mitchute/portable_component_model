@@ -28,26 +28,25 @@ class HeatPump {
 };
 
 class GHE {
+    double ts;
+    double c0; // Simplification term
+    void g_expander(int num_hours);
+    double summation(int hour);
+
+  public:
     double soil_temp;
     double specific_heat;
     double bh_length;
     double bh_resistance;
     double soil_conduct;
     double rho_cp;
-    double ts;
-    double c0; // Simplification term
-
-    std::vector<double> g_func; // g function output values
-    std::vector<double> lntts;  // g function input values
-    void g_expander(int num_hours);
-    double summation(int hour);
-
-  public:
     double outlet_temperature = 0.0;
     double Tf;
     double current_GHEload;
     double ghe_Tin;
     double c1;
+    std::vector<double> g_func; // g function output values
+    std::vector<double> lntts;  // g function input values
     std::vector<int> hours_as_seconds; // hourly data as seconds
     std::vector<double> calc_lntts;    // Calculated lntts values from num_time_steps
     std::vector<double> ghe_load;

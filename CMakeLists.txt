@@ -36,6 +36,16 @@ target_link_libraries(model model_lib)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
+# sndbx executable
+add_executable(
+        sndbx
+        ${PROJECT_SOURCE_DIR}/standalone/sndbx.cpp
+)
+
+target_link_libraries(sndbx model_lib)
+target_include_directories(sndbx PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(sndbx PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
+
 # this is the type of build rules if this was built as a part of EnergyPlus
 # add_executable(
 #         mock_energyplus
