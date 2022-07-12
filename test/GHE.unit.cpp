@@ -2,6 +2,7 @@
 #include <GHE.h>
 #include <cmath>
 #include <sstream>
+#include <iostream>
 
 TEST_CASE("Test the GHE Model") {
     // Setup output streams
