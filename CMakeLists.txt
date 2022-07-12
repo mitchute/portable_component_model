@@ -7,12 +7,12 @@ message(${PROJECT_SOURCE_DIR})
 
 # this is the type of build rules if the model is built as a standalone library
 add_library(
-        model
+        model_lib
         ${PROJECT_SOURCE_DIR}/model/include/GHE.h
         ${PROJECT_SOURCE_DIR}/model/GHE.cpp
 )
 
-target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(model_lib PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
 
 # model library tests
 add_executable(
@@ -22,8 +22,19 @@ add_executable(
         ${PROJECT_SOURCE_DIR}/test/GHE.unit.cpp
 )
 
-target_link_libraries(model_test model)
+target_link_libraries(model_test model_lib)
 target_include_directories(model_test PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+
+
+# standalone executable
+add_executable(
+        model
+        ${PROJECT_SOURCE_DIR}/standalone/main.cpp
+)
+
+target_link_libraries(model model_lib)
+target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
 # this is the type of build rules if this was built as a part of EnergyPlus
 # add_executable(
