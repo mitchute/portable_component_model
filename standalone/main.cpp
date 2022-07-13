@@ -3,6 +3,8 @@
 #include <iostream>
 #include <json.hpp>
 
+// ToDo: Add comments explaining parts of this main function
+
 using json = nlohmann::json;
 
 struct main_vars {
@@ -27,7 +29,8 @@ struct main_vars {
 main_vars load_data() {
     main_vars load_vars;
     // opening file and reading data
-    std::string path = "/home/edwin/Projects/portable_component_model/standalone/inputs/test.json";
+    std::string path = "/Users/ryan/Research_local/NREL/portable_component_model/standalone/inputs/test.json"; // ToDo: make this a user input, so
+                                                                                                               // they can specify path to save items.
     std::ifstream file(path);
     json inputs;
     if (!file.is_open()) {
@@ -37,6 +40,7 @@ main_vars load_data() {
     file >> inputs;
     file.close();
 
+    // ToDo: Ask matt about making this data reading process more generalizable, is all GHE config data the same format as that json?
     inputs["loads"]["load_periods"].get_to(load_vars.load_periods);
     inputs["loads"]["hr_per_timestep"].get_to(load_vars.hr_per_timestep);
     inputs["loads"]["data"].get_to(load_vars.building_load);
@@ -50,11 +54,16 @@ main_vars load_data() {
     inputs["ghe"][0]["self_lntts"].get_to(load_vars.lntts);
     inputs["ghe"][0]["self_g_func"].get_to(load_vars.g_func);
 
+    // ToDo: make these three a user input, but give the user the option to use these as defaults
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
 
     load_vars.num_hours = load_vars.building_load.size();
+    // std::cout << load_vars.num_hours << ", " << load_vars.load_periods << ", " << load_vars.hr_per_timestep << ", " << load_vars.soil_temp << ", "
+    // << load_vars.soil_conduct << ", " << load_vars.rho_cp << ", " << load_vars.bh_length << ", " << load_vars.bh_resistance << ", " <<
+    // load_vars.num_bh << ", " << load_vars.timestep_start << "," << load_vars.lntts.size() << "," << load_vars.g_func.size() << "," <<
+    // load_vars.building_load.size() << std::endl;
     return load_vars;
 }
 
@@ -68,8 +77,8 @@ int main() {
 
     // Setup output streams
     std::stringstream output_string;
-    std::ofstream static outputs("/tmp/outputs.csv", std::ofstream::out);
-    std::ofstream static debug("/tmp/debug.csv", std::ofstream::out);
+    std::ofstream static outputs("../standalone/outputs/outputs.csv", std::ofstream::out);
+    std::ofstream static debug("../standalone/outputs/debug.csv", std::ofstream::out);
     outputs << "n"
             << ","
             << "GHE Load"

@@ -36,7 +36,7 @@ target_link_libraries(model model_lib)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
-# sndbx executable
+#sndbx executable
 add_executable(
         sndbx
         ${PROJECT_SOURCE_DIR}/standalone/sndbx.cpp

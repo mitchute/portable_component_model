@@ -9,6 +9,7 @@
 class Pump {
     // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
     double fixed_flow_rate = 0.2;
+
   public:
     double flow_rate = 0.0;
     void set_flow_rate() { flow_rate = fixed_flow_rate; }
@@ -25,6 +26,8 @@ class HeatPump {
         : heating(heating_coefficients), cooling(cooling_coefficients){};
     void operate(double inlet_temperature, double operating_flow_rate, double building_load);
 };
+
+// ToDo: potentially add a new struct here that can be passed to GHE constructor instead passing each var individually
 
 class GHE {
     double ts;
@@ -44,15 +47,15 @@ class GHE {
     double current_GHEload;
     double ghe_Tin;
     double c1;
-    std::vector<double> g_func; // g function output values
-    std::vector<double> lntts;  // g function input values
+    std::vector<double> g_func;        // g function output values
+    std::vector<double> lntts;         // g function input values
     std::vector<int> hours_as_seconds; // hourly data as seconds
     std::vector<double> calc_lntts;    // Calculated lntts values from num_time_steps
     std::vector<double> ghe_load;
     std::vector<double> interp_g_values; // Interpolated g values from interp_lntts
 
     GHE(int num_hours, double soil_temp, double specific_heat, double bh_length, double bh_resistance, double soil_conduct, double rho_cp,
-                 std::vector<double> &g_func, std::vector<double> &lntts);
+        std::vector<double> &g_func, std::vector<double> &lntts);
     void simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate);
 };
 #endif
