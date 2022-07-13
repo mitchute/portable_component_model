@@ -51,7 +51,8 @@ class GHE {
     std::vector<double> ghe_load;
     std::vector<double> interp_g_values; // Interpolated g values from interp_lntts
 
-    explicit GHE(int num_hours);
+    GHE(int num_hours, double soil_temp, double specific_heat, double bh_length, double bh_resistance, double soil_conduct, double rho_cp,
+                 std::vector<double> &g_func, std::vector<double> &lntts);
     void simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate);
 };
 #endif

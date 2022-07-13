@@ -27,7 +27,7 @@ struct main_vars {
 main_vars load_data() {
     main_vars load_vars;
     // opening file and reading data
-    std::string path = "/Users/ryan/Research_local/NREL/portable_component_model/standalone/inputs/test.json";
+    std::string path = "/home/edwin/Projects/portable_component_model/standalone/inputs/test.json";
     std::ifstream file(path);
     json inputs;
     if (!file.is_open()) {
@@ -63,21 +63,13 @@ int main() {
     main_vars inputs = load_data();
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
-    GHE ghe(inputs.num_hours);
-    // load data
-    ghe.soil_temp = inputs.soil_temp;
-    ghe.specific_heat = inputs.specific_heat;
-    ghe.bh_length = inputs.bh_length;
-    ghe.bh_resistance = inputs.bh_resistance;
-    ghe.soil_conduct = inputs.soil_conduct;
-    ghe.rho_cp = inputs.rho_cp;
-    ghe.g_func = inputs.g_func;
-    ghe.lntts = inputs.lntts;
+    GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
+            inputs.g_func, inputs.lntts);
 
     // Setup output streams
     std::stringstream output_string;
-    std::ofstream static outputs("/Users/ryan/Research_local/NREL/portable_component_model/standalone/outputs/outputs.csv", std::ofstream::out);
-    std::ofstream static debug("/Users/ryan/Research_local/NREL/portable_component_model/standalone/outputs/debug.csv", std::ofstream::out);
+    std::ofstream static outputs("/tmp/outputs.csv", std::ofstream::out);
+    std::ofstream static debug("/tmp/debug.csv", std::ofstream::out);
     outputs << "n"
             << ","
             << "GHE Load"
