@@ -1,7 +1,7 @@
 #include <GHE.h>
-#include <json.hpp>
 #include <cmath>
 #include <iostream>
+#include <json.hpp>
 #include <sstream>
 using json = nlohmann::json;
 int main() {
@@ -47,7 +47,8 @@ int main() {
     // load data
     int num_hours = building_load.size();
 
-    std::cout << num_hours << ", " << load_periods << ", " << hr_per_timestep << ", " << soil_temp << ", " << soil_conduct << ", " << rho_cp << ", " << bh_length << ", " << bh_resistance << ", " << num_bh << ", " << timestep_start << std::endl;
+    std::cout << num_hours << ", " << load_periods << ", " << hr_per_timestep << ", " << soil_temp << ", " << soil_conduct << ", " << rho_cp << ", "
+              << bh_length << ", " << bh_resistance << ", " << num_bh << ", " << timestep_start << std::endl;
 
     return 0;
 }
