@@ -26,11 +26,85 @@ struct main_vars {
     std::array<double, 3> cooling_coefficients;
 };
 
+//std::tuple <std::string, double, std::array<double, 3>, std::array<double, 3>> user_inputs () {
+//
+//    //ToDo get this function up and running
+//    std::string path;
+//    //User inputs
+//    std::cout << "Please specify the path of the ghe configuration data (type .json): "
+//              << "\n";
+//    std::cin >> path;
+//
+//    //User inputs for non json data
+//    std::string choice;
+//    std::cout << "Would you like to enter a value for specific heat or use the default (4200)? (input yes or default): "
+//              << "\n";
+//    std::cin >> choice;
+//    if (choice == "yes") {
+//        std::cout << "Please enter the value of the specific heat: "
+//                  << "\n";
+//        std::cin >> load_vars.specific_heat;
+//        std::cout << "Specific heat = " << load_vars.specific_heat << "\n";
+//    } else {
+//        std::cout << "Specific heat = " << load_vars.specific_heat << "\n";
+//    }
+//    std::cout
+//        << "Would you like to enter a value for HP heating coefficients or use the default (0.705459, 0.005447, -0.000077)? (input yes or default): "
+//        << "\n";
+//    std::cin >> choice;
+//    if (choice == "yes") {
+//        std::cout << "Please enter the first heating coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.heating_coefficients[0];
+//        std::cout << "Please enter the second heating coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.heating_coefficients[1];
+//        std::cout << "Please enter the third heating coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.heating_coefficients[2];
+//        std::cout << "Heating coefficients = {" << load_vars.heating_coefficients[0] << ", " << load_vars.heating_coefficients[1] << ", "
+//                  << load_vars.heating_coefficients[2] << "}"
+//                  << "\n";
+//    } else {
+//        std::cout << "Heating coefficients = {" << load_vars.heating_coefficients[0] << ", " << load_vars.heating_coefficients[1] << ", "
+//                  << load_vars.heating_coefficients[2] << "}"
+//                  << "\n";
+//    }
+//    std::cout
+//        << "Would you like to enter a value for HP cooling coefficients or use the default (1.092440, 0.000314, 0.000114)? (input yes or default): "
+//        << "\n";
+//    std::cin >> choice;
+//    if (choice == "yes") {
+//        std::cout << "Please enter the first cooling coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.cooling_coefficients[0];
+//        std::cout << "Please enter the second cooling coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.cooling_coefficients[1];
+//        std::cout << "Please enter the third cooling coefficient: "
+//                  << "\n";
+//        std::cin >> load_vars.cooling_coefficients[2];
+//        std::cout << "Cooling coefficients = {" << load_vars.cooling_coefficients[0] << ", " << load_vars.cooling_coefficients[1] << ", "
+//                  << load_vars.cooling_coefficients[2] << "}"
+//                  << "\n";
+//    } else {
+//        std::cout << "Cooling coefficients = {" << load_vars.cooling_coefficients[0] << ", " << load_vars.cooling_coefficients[1] << ", "
+//                  << load_vars.cooling_coefficients[2] << "}"
+//                  << "\n";
+//    }
+//
+//    return path;
+//};
+
 main_vars load_data() {
     main_vars load_vars;
+    std::string path;
+    //path = user_inputs();
+    path = "/Users/ryan/Research_local/NREL/portable_component_model/standalone/inputs/test.json"; // temporary hard coded path for dev
+
     // opening file and reading data
-    std::string path = "/Users/ryan/Research_local/NREL/portable_component_model/standalone/inputs/test.json"; // ToDo: make this a user input, so
-                                                                                                               // they can specify path to save items.
+    std::cout << "Path to ghe config data is: " << path << std::endl;
+
     std::ifstream file(path);
     json inputs;
     if (!file.is_open()) {
@@ -54,31 +128,23 @@ main_vars load_data() {
     inputs["ghe"][0]["self_lntts"].get_to(load_vars.lntts);
     inputs["ghe"][0]["self_g_func"].get_to(load_vars.g_func);
 
-    // ToDo: make these three a user input, but give the user the option to use these as defaults
+    //hardcoded data not found in json
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114}; // HP cooling coefficients hard coded from GLHEPro
 
     load_vars.num_hours = load_vars.building_load.size();
-    // std::cout << load_vars.num_hours << ", " << load_vars.load_periods << ", " << load_vars.hr_per_timestep << ", " << load_vars.soil_temp << ", "
-    // << load_vars.soil_conduct << ", " << load_vars.rho_cp << ", " << load_vars.bh_length << ", " << load_vars.bh_resistance << ", " <<
-    // load_vars.num_bh << ", " << load_vars.timestep_start << "," << load_vars.lntts.size() << "," << load_vars.g_func.size() << "," <<
-    // load_vars.building_load.size() << std::endl;
     return load_vars;
 }
 
 int main() {
-    // set up classes
-    main_vars inputs = load_data();
-    Pump pump;
-    HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
-    GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
-            inputs.g_func, inputs.lntts);
 
     // Setup output streams
+    // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
     std::stringstream output_string;
-    std::ofstream static outputs("../standalone/outputs/outputs.csv", std::ofstream::out);
-    std::ofstream static debug("../standalone/outputs/debug.csv", std::ofstream::out);
+    std::string output_file_path = "../standalone/Outputs/outputs.csv";
+    std::ofstream outputs(output_file_path);
+    std::ofstream debug("../standalone/Outputs/debug.csv");
     outputs << "n"
             << ","
             << "GHE Load"
@@ -110,17 +176,26 @@ int main() {
           << "ghe.c1"
           << "\n";
 
+    // Create instances of classes
+    main_vars inputs = load_data();
+    Pump pump;
+    HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
+    GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
+            inputs.g_func, inputs.lntts);
+
     // Run the model
     int hour = 0;
     for (double bldgload : inputs.building_load) {
         // Operate the pump to set the loop flow rate
         pump.set_flow_rate();
+
         // Operate the heat pump using the last ghe outlet temperature as the new hp inlet temperature
         if (hour == 0) {
             hp.outlet_temperature = 0;
         } else {
             hp.operate(ghe.outlet_temperature, pump.flow_rate, bldgload);
         }
+
         // Now run the GHE
         ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
 
@@ -131,5 +206,7 @@ int main() {
               << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour] << "," << ghe.outlet_temperature << "," << ghe.Tf << "," << ghe.c1 << "\n";
         hour++;
     }
+    std::cout << "Executed successfully for " << inputs.num_hours << " iterations" << "\n";
+    std::cout << "csv outputs found at " << output_file_path << std::endl;
     return 0;
 }
