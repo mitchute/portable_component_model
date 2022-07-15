@@ -7,7 +7,7 @@
 #include <vector>
 
 class Pump {
-    // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
+    // ToDo: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
     double fixed_flow_rate = 0.2;
 
   public:
@@ -31,7 +31,7 @@ class HeatPump {
 
 class GHE {
     double ts;
-    double c0; // Simplification term
+    double c0;
     void g_expander(int num_hours);
     double summation(int hour);
 

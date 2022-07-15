@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 struct main_vars {
     double soil_temp = 10;
@@ -39,13 +40,33 @@ struct main_vars {
     std::array<double, 3> cooling_coefficients = {1.092440, 0.000314, 0.000114};
 };
 
+struct test_vars {
+    std::vector<double> ghe_tout;
+    std::vector<double> ghe_tin;
+};
+
+test_vars load_data (){
+    test_vars test_values;
+    std::ifstream GLHEPro_gheTout ("../test/inputs/GLHEPro_gheTout.txt");
+    std::ifstream GLHEPro_gheTin ("../test/inputs/GLHEPro_gheTin.txt");
+
+    std::vector<double> GLHEPro_ghe_Tout (std::istream_iterator<double>{GLHEPro_gheTout}, std::istream_iterator<double>{});
+    for(double Tout: GLHEPro_ghe_Tout) {
+        test_values.ghe_tout.push_back(Tout);
+    }
+    return test_values;
+}
+
 TEST_CASE("Test the GHE Model") {
+
+    //load data for testing
+    test_vars test_values = load_data();
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
     std::stringstream output_string;
-    std::ofstream outputs("../standalone/Outputs/outputs.csv");
-    std::ofstream debug("../standalone/Outputs/debug.csv");
+    std::ofstream outputs("../test/outputs/test_outputs.csv");
+    std::ofstream debug("../test/outputs/debug.csv");
 
     main_vars inputs;
     double bldgn = -1000;
@@ -113,6 +134,6 @@ TEST_CASE("Test the GHE Model") {
                 << inputs.building_load[hour] << "\n";
         debug << ghe.current_GHEload << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << ","
               << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour] << "," << ghe.outlet_temperature << "," << ghe.Tf << "," << ghe.c1 << "\n";
+        CHECK(ghe.outlet_temperature == doctest::Approx(test_values.ghe_tout[hour]).epsilon(0.1));
     }
-    CHECK(pump.flow_rate == 0.2);
 }
