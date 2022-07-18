@@ -153,8 +153,8 @@ main_vars load_data() {
     inputs["ghe"][0]["timestep_start_operate"].get_to(load_vars.timestep_start_a);
     inputs["ghe"][0]["self_lntts"].get_to(load_vars.lntts_self_a);
     inputs["ghe"][0]["self_g_func"].get_to(load_vars.g_self_a);
-    inputs["ghe"][0]["cross_lntts"].get_to(load_vars.lntts_self_a);
-    inputs["ghe"][0]["cross_g_func"].get_to(load_vars.g_self_a);
+    inputs["ghe"][0]["cross_lntts"].get_to(load_vars.lntts_cross_a);
+    inputs["ghe"][0]["cross_g_func"].get_to(load_vars.g_cross_a);
 
     inputs["ghe"][1]["bh_length"].get_to(load_vars.bh_length_b);
     inputs["ghe"][1]["bh_resistance"].get_to(load_vars.bh_resistance_b);
@@ -162,10 +162,11 @@ main_vars load_data() {
     inputs["ghe"][1]["timestep_start_operate"].get_to(load_vars.timestep_start_b);
     inputs["ghe"][1]["self_lntts"].get_to(load_vars.lntts_self_b);
     inputs["ghe"][1]["self_g_func"].get_to(load_vars.g_self_b);
-    inputs["ghe"][1]["cross_lntts"].get_to(load_vars.lntts_self_b);
-    inputs["ghe"][1]["cross_g_func"].get_to(load_vars.g_self_b);
+    inputs["ghe"][1]["cross_lntts"].get_to(load_vars.lntts_cross_b);
+    inputs["ghe"][1]["cross_g_func"].get_to(load_vars.g_cross_b);
 
-    load_vars.num_hours = load_vars.building_load.size();
+    //load_vars.num_hours = load_vars.building_load.size() * load_vars.hr_per_timestep * load_vars.load_periods;
+    load_vars.num_hours = load_vars.building_load.size() * load_vars.hr_per_timestep; //only for one year
     return load_vars;
 }
 
@@ -177,7 +178,7 @@ int main() {
     std::stringstream output_string;
     std::string output_file_path = "../standalone/outputs/outputs.csv";
     std::ofstream outputs(output_file_path);
-    //std::ofstream debug("../standalone/outputs/debug.csv");
+    std::ofstream debug("../standalone/outputs/debug.csv");
     outputs << "n"
             << ","
             << "A: GHE Load"
@@ -198,49 +199,84 @@ int main() {
             << ","
             << "bldgload"
             << "\n";
-//    debug << "ghe.qn"
-//          << ","
-//          << "ghe.ghe_Tin"
-//          << ","
-//          << "ghe.q_time[n]"
-//          << ","
-//          << "ghe.ghe_load[n]"
-//          << ","
-//          << "ghe.q_lntts[n]"
-//          << ","
-//          << "ghe.g_data[n]"
-//          << ","
-//          << "ghe.ghe_Tout[n]"
-//          << ","
-//          << "ghe.ghe_Tf[n]"
-//          << ","
-//          << "ghe.c1"
-//          << "\n";
+    debug << "lntts_self_a"
+          << ","
+          << "lntts_cross_a"
+          << ","
+          << "lntts_self_b"
+          << ","
+          << "lntts_cross_b"
+          << ","
+          << "g_self_a"
+          << ","
+          << "g_cross_a"
+          << ","
+          << "g_self_b"
+          << ","
+          << "g_cross_b"
+          << "\n";
 
     // Create instances of classes
     main_vars inputs = load_data();
     Pump pump;
     HeatPump hp_a(inputs.heating_coefficients, inputs.cooling_coefficients);
     HeatPump hp_b(inputs.heating_coefficients, inputs.cooling_coefficients);
+
+    std::cout << "Constructing A" << "\n";
     GHE ghe_a(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a, inputs.soil_conduct, inputs.rho_cp,
             inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a);
+
+    std::cout << "Constructing B" << "\n";
     GHE ghe_b(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_b, inputs.bh_resistance_b, inputs.soil_conduct, inputs.rho_cp,
               inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b);
 
+    //checking g func values
+    for (int i = 0 ; i<24 ; i++){
+        debug << inputs.lntts_self_a[i]
+                          << ","
+                          << inputs.lntts_cross_a[i]
+                          << ","
+                          << inputs.lntts_self_b[i]
+                          << ","
+                          << inputs.lntts_cross_b[i]
+                          << ","
+                          << inputs.g_self_a[i]
+                          << ","
+                          << inputs.g_cross_a[i]
+                          << ","
+                          << inputs.g_self_b[i]
+                          << ","
+                          << inputs.g_cross_b[i]
+                          << "\n";
+    }
+
+
     // Run the model
-    int hour = 0;
+    double bldgload;
     double BH_temp_a = 0;
     double BH_temp_b = 0;
-    inputs.building_load = inputs.building_load * 20;
-    for (double bldgload : inputs.building_load) {
+    int time_step = 0;
+    for ( int hour = 0 ; hour <= inputs.num_hours ; hour++) {
+
+        //reading in building load
+        if (std::remainder(hour, inputs.hr_per_timestep) == 0){
+            bldgload = inputs.building_load[time_step];
+            time_step++;
+            if (std::remainder(hour, (inputs.hr_per_timestep * inputs.building_load.size())) == 0) {
+                time_step = 0;
+            }
+        }
+
         // Operate the pump to set the loop flow rate
         pump.set_flow_rate();
 
         // Operate the heat pump using the last ghe outlet temperature as the new hp inlet temperature
         if (hour == 0) {
             hp_a.outlet_temperature = 0;
+            hp_b.outlet_temperature = 0;
         } else {
             hp_a.operate(ghe_a.outlet_temperature, pump.flow_rate, bldgload);
+            hp_b.operate(ghe_a.outlet_temperature, pump.flow_rate, bldgload);
         }
 
         // Now run the GHE
@@ -251,7 +287,6 @@ int main() {
         outputs << hour << "," << ghe_a.ghe_load.back() << "," << ghe_b.ghe_load.back() << "," << hp_a.outlet_temperature << "," << hp_b.outlet_temperature << "," << ghe_a.outlet_temperature << "," << ghe_b.outlet_temperature << "," << ghe_a.MFT << "," << ghe_b.MFT << ","
                 << bldgload << "\n";
         //debug << ghe_a.current_GHEload << "," << ghe_a.ghe_Tin << "," << ghe_a.hours_as_seconds[hour] << "," << ghe_a.ghe_load[hour] << "," << ghe_a.calc_lntts[hour] << "," << ghe_a.interp_g_self[hour] << "," << ghe_a.outlet_temperature << "," << ghe_a.MFT << "," << ghe_a.c1[0] << "\n";
-        hour++;
     }
     std::cout << "Executed for " << inputs.num_hours << " iterations"
               << "\n";

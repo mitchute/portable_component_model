@@ -86,8 +86,8 @@ void GHE::g_expander(int num_hours) {
     auto lntts_cross_end = lntts_cross.end();
     while (n < num_hours) {
         // Building vector of lntts values
-        hours_as_seconds.push_back(3600 * (n + 1));
-        calc_lntts.push_back(log(hours_as_seconds[n] / ts));
+        hours_as_seconds.push_back(3600 * (n + 1)); //TODO: doesnt need to be vector, can just be an int calculated every time
+        calc_lntts.push_back(log(hours_as_seconds[n] / ts)); //TODO: doesnt need to be vector, can just be an int calculated every time
 
         auto upper_it = std::upper_bound(lntts_self_begin, lntts_self_end, calc_lntts[n]);
         if (upper_it == lntts_self_begin) {
