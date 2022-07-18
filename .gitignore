@@ -1,12 +1,15 @@
-debug.csv
-outputs.csv
 ~$*
 .DS_Store
 
 .idea
 cmake-build-debug
 build
-outputs
+outputs/*
+/standalone/inputs/*
+/standalone/outputs/*
+/test/inputs/*
+/test/outputs/*
+
 
 # Prerequisites
 *.d
@@ -40,3 +43,4 @@ outputs
 *.exe
 *.out
 *.app
+

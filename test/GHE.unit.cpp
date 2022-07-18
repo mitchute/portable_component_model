@@ -62,6 +62,8 @@ TEST_CASE("Test the GHE Model") {
 
     // load data for testing
     test_vars test_values = load_data();
+    std::vector < double > stand_in_cross;
+    double BH_temp;
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
@@ -111,13 +113,15 @@ TEST_CASE("Test the GHE Model") {
           << "ghe.ghe_Tf[n]"
           << ","
           << "ghe.c1"
+          << ","
+          << "BH_temp"
           << "\n";
 
     // Get objects for all the components around the loop
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
     GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
-            inputs.g_func, inputs.lntts);
+            inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
 
     // Run the model
     for (int hour = 0; hour < num_hours; hour++) {
@@ -130,11 +134,11 @@ TEST_CASE("Test the GHE Model") {
             hp.operate(ghe.outlet_temperature, pump.flow_rate, inputs.building_load[hour]);
         }
         // Now run the GHE
-        ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
-        outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.Tf << ","
+        BH_temp = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate, 0);
+        outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
                 << inputs.building_load[hour] << "\n";
         debug << ghe.current_GHEload << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << ","
-              << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour] << "," << ghe.outlet_temperature << "," << ghe.Tf << "," << ghe.c1 << "\n";
+              << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0] << "," << BH_temp << "\n";
         CHECK(ghe.outlet_temperature == doctest::Approx(test_values.ghe_tout[hour]).epsilon(0.1));
     }
 }
