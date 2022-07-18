@@ -3,7 +3,7 @@
 #include <iostream>
 #include <json.hpp>
 
-// ToDo: Add comments explaining parts of this main function
+// TODO: Add comments explaining parts of this main function
 
 using json = nlohmann::json;
 
@@ -33,14 +33,14 @@ struct input_vars {
     std::array<double, 3> cooling_coefficients_in;
 };
 
-input_vars usr_inputs () {
+input_vars usr_inputs() {
     input_vars inputs;
-    //User inputs
+    // User inputs
     std::cout << "Please specify the path of the ghe configuration data (type .json): "
               << "\n";
     std::cin >> inputs.json_path_in;
 
-    //User inputs for non json data
+    // User inputs for non json data
     std::string choice;
     std::cout << "Would you like to enter a value for specific heat or use the default (4200)? (input yes or default): "
               << "\n";
@@ -100,7 +100,7 @@ main_vars load_data() {
               << "\n";
 
     input_path = user_inputs.json_path_in;
-    input_path = "/Users/ryan/research_local/NREL/portable_component_model/standalone/inputs/test.json"; // temporary hard coded path for dev
+    input_path = "../standalone/inputs/test.json"; // temporary hard coded path for dev
 
     // opening file and reading data
     std::cout << "Path to ghe config data is: " << input_path << std::endl;
@@ -110,7 +110,7 @@ main_vars load_data() {
     if (!file.is_open()) {
         std::cout << "Error, file is open" << std::endl;
         file.close();
-        exit (EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     file >> inputs;
     file.close();
@@ -128,10 +128,10 @@ main_vars load_data() {
     inputs["ghe"][0]["self_lntts"].get_to(load_vars.lntts);
     inputs["ghe"][0]["self_g_func"].get_to(load_vars.g_func);
 
-    //hardcoded data not found in json
+    // hardcoded data not found in json
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114}; // HP cooling coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
 
     load_vars.num_hours = load_vars.building_load.size();
     return load_vars;
@@ -206,7 +206,8 @@ int main() {
               << ghe.calc_lntts[hour] << "," << ghe.interp_g_values[hour] << "," << ghe.outlet_temperature << "," << ghe.Tf << "," << ghe.c1 << "\n";
         hour++;
     }
-    std::cout << "Executed successfully for " << inputs.num_hours << " iterations" << "\n";
+    std::cout << "Executed successfully for " << inputs.num_hours << " iterations"
+              << "\n";
     std::cout << "csv outputs found at " << output_file_path << std::endl;
     return 0;
 }

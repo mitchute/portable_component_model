@@ -7,7 +7,7 @@
 #include <vector>
 
 class Pump {
-    // ToDo: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
+    // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
     double fixed_flow_rate = 0.2;
 
   public:
@@ -27,7 +27,7 @@ class HeatPump {
     void operate(double inlet_temperature, double operating_flow_rate, double building_load);
 };
 
-// ToDo: potentially add a new struct here that can be passed to GHE constructor instead passing each var individually
+// TODO: potentially add a new struct here that can be passed to GHE constructor instead passing each var individually
 
 class GHE {
     double ts;

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <iterator>
 
 struct main_vars {
     double soil_temp = 10;
@@ -45,13 +46,13 @@ struct test_vars {
     std::vector<double> ghe_tin;
 };
 
-test_vars load_data (){
+test_vars load_data() {
     test_vars test_values;
-    std::ifstream GLHEPro_gheTout ("../test/inputs/GLHEPro_gheTout.txt");
-    std::ifstream GLHEPro_gheTin ("../test/inputs/GLHEPro_gheTin.txt");
+    std::ifstream GLHEPro_gheTout("../test/inputs/GLHEPro_gheTout.txt");
+    std::ifstream GLHEPro_gheTin("../test/inputs/GLHEPro_gheTin.txt");
 
-    std::vector<double> GLHEPro_ghe_Tout (std::istream_iterator<double>{GLHEPro_gheTout}, std::istream_iterator<double>{});
-    for(double Tout: GLHEPro_ghe_Tout) {
+    std::vector<double> GLHEPro_ghe_Tout(std::istream_iterator<double>{GLHEPro_gheTout}, std::istream_iterator<double>{});
+    for (double Tout : GLHEPro_ghe_Tout) {
         test_values.ghe_tout.push_back(Tout);
     }
     return test_values;
@@ -59,7 +60,7 @@ test_vars load_data (){
 
 TEST_CASE("Test the GHE Model") {
 
-    //load data for testing
+    // load data for testing
     test_vars test_values = load_data();
 
     // Setup output streams

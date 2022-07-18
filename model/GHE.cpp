@@ -7,7 +7,7 @@
 #include <cmath>
 #include <iostream>
 
-// ToDo: move these descriptions to a README.txt file that explain model and vars.
+// TODO: move these descriptions to a README.txt file that explain model and vars.
 
 // Variables (See nomenclature section):
 // H - active borehole length (Active length of pipe)
@@ -51,7 +51,7 @@ void HeatPump::operate(double inlet_temperature, double operating_flow_rate, dou
 GHE::GHE(int num_hours, double soil_temp, double specific_heat, double bh_length, double bh_resistance, double soil_conduct, double rho_cp,
          std::vector<double> &g_func, std::vector<double> &lntts) {
 
-    // ToDo: change var names so that 'this->' is not necessary
+    // TODO: change var names so that 'this->' is not necessary
 
     this->soil_temp = soil_temp;
     this->specific_heat = specific_heat;
