@@ -97,16 +97,16 @@ main_vars load_data() {
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
-    input_path = "../standalone/inputs/test.json";                    // default path
+    input_path = "../standalone/inputs/A.json";                    // default path
 
-    // User inputs to change the above hard coded data. Can be commented out.
-    input_vars user_inputs = usr_inputs();
-    load_vars.specific_heat = user_inputs.specific_heat_in;
-    load_vars.heating_coefficients = user_inputs.heating_coefficients_in;
-    load_vars.cooling_coefficients = user_inputs.cooling_coefficients_in;
-    if (!user_inputs.json_path_in.empty()) {
-        input_path = user_inputs.json_path_in;
-    }
+//    // User inputs to change the above hard coded data. Can be commented out.
+//    input_vars user_inputs = usr_inputs();
+//    load_vars.specific_heat = user_inputs.specific_heat_in;
+//    load_vars.heating_coefficients = user_inputs.heating_coefficients_in;
+//    load_vars.cooling_coefficients = user_inputs.cooling_coefficients_in;
+//    if (!user_inputs.json_path_in.empty()) {
+//        input_path = user_inputs.json_path_in;
+//    }
 
     std::cout << "-----------------------------------"
               << "\n";
@@ -144,7 +144,7 @@ main_vars load_data() {
     inputs["ghe"][0]["self_lntts"].get_to(load_vars.lntts);
     inputs["ghe"][0]["self_g_func"].get_to(load_vars.g_func);
 
-    load_vars.num_hours = load_vars.building_load.size();
+    load_vars.num_hours = load_vars.building_load.size() * load_vars.load_periods;
     return load_vars;
 }
 
@@ -193,12 +193,37 @@ int main() {
     main_vars inputs = load_data();
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
-    GHE ghe(inputs.num_hours, 1, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
+    GHE ghe(inputs.num_hours, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
             inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
+
+    //Build load vector for use with A.json
+    std::vector<double> bldgload;
+    bldgload.reserve(inputs.num_hours);
+    int month = 0;
+    for (int time_step = 0; time_step < inputs.num_hours; time_step++) {
+        if (std::remainder(time_step, inputs.building_load.size()) == 0) {
+            month = 0;
+        }
+        bldgload.push_back(inputs.building_load[month]);
+        month++;
+    }
+
+//    //Build load vector for with test.json
+//    double bldgn = -1000;
+//    inputs.building_load.clear();
+//    inputs.building_load.reserve(inputs.num_hours);
+//    for (int j = 0; j <= inputs.num_hours; j++) {
+//        // Update the building load
+//        if (std::remainder(j, 730) == 0) {
+//            bldgn = bldgn * -1;
+//        }
+//        inputs.building_load.push_back(bldgn);
+//    }
+
 
     // Run the model
     int hour = 0;
-    for (double bldgload : inputs.building_load) {
+    for (double buildload : bldgload) {
         // Operate the pump to set the loop flow rate
         pump.set_flow_rate();
 
@@ -206,7 +231,7 @@ int main() {
         if (hour == 0) {
             hp.outlet_temperature = 0;
         } else {
-            hp.operate(ghe.outlet_temperature, pump.flow_rate, bldgload);
+            hp.operate(ghe.outlet_temperature, pump.flow_rate, buildload);
         }
 
         // Now run the GHE
@@ -214,7 +239,7 @@ int main() {
 
         // Finally, write data for each loop iteration
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
-                << bldgload << "\n";
+                << buildload << "\n";
         debug << ghe.current_GHEload << "," << hp.outlet_temperature << "," << ghe.hours_as_seconds << "," << ghe.ghe_load[hour] << ","
               << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0]
               << "\n";
