@@ -48,7 +48,9 @@ void HeatPump::operate(double inlet_temperature, double operating_flow_rate, dou
     outlet_temperature = inlet_temperature - (source_side_load / (operating_flow_rate * specific_heat));
 }
 
-GHE::GHE(int num_hours, double soil_temp_in, double specific_heat_in, double bh_length_in, double bh_resistance_in, double soil_conduct_in, double rho_cp_in, std::vector<double> &g_func_self_in, std::vector<double> &lntts_self_in, std::vector<double> &g_func_cross_in, std::vector<double> &lntts_cross_in) {
+GHE::GHE(int num_time_steps, int hours_per_timestep_in, double soil_temp_in, double specific_heat_in, double bh_length_in, double bh_resistance_in,
+         double soil_conduct_in, double rho_cp_in, std::vector<double> &g_func_self_in, std::vector<double> &lntts_self_in,
+         std::vector<double> &g_func_cross_in, std::vector<double> &lntts_cross_in) {
 
     soil_temp = soil_temp_in;
     specific_heat = specific_heat_in;
@@ -60,12 +62,11 @@ GHE::GHE(int num_hours, double soil_temp_in, double specific_heat_in, double bh_
     lntts_self = lntts_self_in;
     g_func_cross = g_func_cross_in;
     lntts_cross = lntts_cross_in;
-
-    hours_as_seconds.reserve(num_hours);
-    calc_lntts.reserve(num_hours);
-    ghe_load.reserve(num_hours);
-    interp_g_self.reserve(num_hours);
-    interp_g_cross.reserve(num_hours);
+    hours_per_timestep = hours_per_timestep_in;
+    calc_lntts.reserve(num_time_steps);
+    ghe_load.reserve(num_time_steps);
+    interp_g_self.reserve(num_time_steps);
+    interp_g_cross.reserve(num_time_steps);
 
     double constexpr pi = 3.14159265358979323846;
     c0 = 1 / (2 * pi * soil_conduct);
@@ -73,21 +74,20 @@ GHE::GHE(int num_hours, double soil_temp_in, double specific_heat_in, double bh_
     // Deriving characteristic time
     ts = pow(bh_length, 2) / (9 * (soil_conduct / rho_cp));
     // Creating interpolated g dataset
-    g_expander(num_hours);
+    g_expander(num_time_steps);
 }
 
 // Expanding g data as step function so that it has same length as q_load
-void GHE::g_expander(int num_hours) {
-    //TODO: potentially change this from class variables to passing the lntts and g func each time. Depends on if with mutiple BH's there are multiple cross g funcs, or if they will always be the same. Ask Matt/Edwin
+void GHE::g_expander(int num_time_steps) {
     int n = 0;
     auto lntts_self_begin = lntts_self.begin();
     auto lntts_self_end = lntts_self.end();
     auto lntts_cross_begin = lntts_cross.begin();
     auto lntts_cross_end = lntts_cross.end();
-    while (n < num_hours) {
+    while (n < num_time_steps) {
         // Building vector of lntts values
-        hours_as_seconds.push_back(3600 * (n + 1)); //TODO: doesnt need to be vector, can just be an int calculated every time
-        calc_lntts.push_back(log(hours_as_seconds[n] / ts)); //TODO: doesnt need to be vector, can just be an int calculated every time
+        hours_as_seconds = 3600 * ((n + 1) * hours_per_timestep);
+        calc_lntts.push_back(log(hours_as_seconds / ts));
 
         auto upper_it = std::upper_bound(lntts_self_begin, lntts_self_end, calc_lntts[n]);
         if (upper_it == lntts_self_begin) {
@@ -110,25 +110,27 @@ void GHE::g_expander(int num_hours) {
             interp_g_self.push_back(g_temp);
         }
         if (!lntts_cross.empty()) {
-            upper_it = std::upper_bound(lntts_cross_begin, lntts_cross_end, calc_lntts[n]);
-            if (upper_it == lntts_self_begin) {
+            auto upper_it_cross = std::upper_bound(lntts_cross_begin, lntts_cross_end, calc_lntts[n]);
+            if (upper_it_cross == lntts_cross_begin) {
                 // Extrapolating beyond the lower bound
                 interp_g_cross.push_back(g_func_cross.front());
                 std::cout << "CROSS: Extrapolating beyond the lower bound index = " << n << "\n";
                 std::cout << g_func_cross.front() << "\n";
-            } else if (upper_it == lntts_self_end) {
+            } else if (upper_it_cross == lntts_cross_end) {
                 // Extrapolating beyond the upper bound
                 interp_g_cross.push_back(g_func_cross.back());
                 std::cout << "CROSS: Extrapolating beyond the upper bound index = " << n << "\n";
             } else {
-                auto u_idx = std::distance(lntts_self.begin(), upper_it);
-                auto l_idx = u_idx - 1;
-                double lntts_low = lntts_cross[l_idx];
-                double lntts_high = lntts_cross[u_idx];
-                double g_func_low = g_func_cross[l_idx];
-                double g_func_high = g_func_cross[u_idx];
-                double g_temp = (calc_lntts[n] - lntts_low) / (lntts_high - lntts_low) * (g_func_high - g_func_low) + g_func_low;
-                interp_g_cross.push_back(g_temp);
+                auto u_idx_cross = std::distance(lntts_self.begin(), upper_it);
+                auto l_idx_cross = u_idx_cross - 1;
+                double lntts_low_cross = lntts_cross[l_idx_cross];
+                double lntts_high_cross = lntts_cross[u_idx_cross];
+                double g_func_low_cross = g_func_cross[l_idx_cross];
+                double g_func_high_cross = g_func_cross[u_idx_cross];
+                double g_temp_cross =
+                    (calc_lntts[n] - lntts_low_cross) / (lntts_high_cross - lntts_low_cross) * (g_func_high_cross - g_func_low_cross) +
+                    g_func_low_cross;
+                interp_g_cross.push_back(g_temp_cross);
             }
         }
         ++n;
@@ -136,51 +138,54 @@ void GHE::g_expander(int num_hours) {
 }
 
 // Summation eqn 1.11 from Mitchell Appendix A
-std::array < double, 2 > GHE::summation(int hour) {
+std::array<double, 2> GHE::summation(int time_step) {
     double q_delta;
-    std::array < double, 2 > total = {0,0};
+    std::array<double, 2> total = {0, 0};
     int i = 0;
-    int j = hour;
-    if (hour != 0) {
-        while (i < hour) {
+    int j = time_step;
+    if (time_step != 0) {
+        while (i < time_step) {
             if (i == 0) {
                 q_delta = ghe_load[i] - 0;
             } else {
                 q_delta = ghe_load[i] - ghe_load[i - 1];
             }
             // eqn 1.11
-            total [0] = total [0] + (q_delta * interp_g_self[j]);
-            total [1] = total [1] + (q_delta * interp_g_self[j]);
+            total[0] = total[0] + (q_delta * interp_g_self[j]);
+            total[1] = total[1] + (q_delta * interp_g_cross[j]);
             j = j - 1;
             ++i;
         }
     }
-    return total; //0 index is self, 1 index is cross
+    return total; // 0 index is self, 1 index is cross
 }
 
-double GHE::simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate, double external_BH_temp) {
+double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double external_Tr) {
     // loading g_data
-    double gn_self = interp_g_self[hour];
+    double gn_self = interp_g_self[time_step];
+    double gn_cross = interp_g_cross[time_step];
 
     // eqn 1.11
-    c1 = summation(hour); //0 index is self, 1 index is cross
+    c1 = summation(time_step); // 0 index is self, 1 index is cross
 
     // calculating current load and appending to data
     double previous_GHEload = 0.0;
-    if (hour > 0) {
-        previous_GHEload = ghe_load[hour - 1];
+    if (time_step > 0) {
+        previous_GHEload = ghe_load[time_step - 1];
     }
     current_GHEload = 0.0;
-    if (hour > 0) {
+    if (time_step > 0) {
         current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
                           ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
     }
     ghe_load.push_back(current_GHEload);
 
     // 1.12
-    internal_BH_temp = c0 * (((current_GHEload - previous_GHEload) * gn_self) + c1[0]);
-    MFT = soil_temp + internal_BH_temp + external_BH_temp + current_GHEload * bh_resistance;
+    internal_Tr = c0 * (((current_GHEload - previous_GHEload) * gn_self) + c1[0]);
+    cross_Tr = c0 * (((current_GHEload - previous_GHEload) * gn_cross) + c1[1]);
+    BH_temp = (soil_temp) + (internal_Tr) + (external_Tr);
+    MFT = (current_GHEload * bh_resistance) + BH_temp;
     // 1.14
     outlet_temperature = MFT - 0.5 * ((current_GHEload * bh_length) / (mass_flow_rate * specific_heat));
-    return internal_BH_temp;
+    return cross_Tr;
 }

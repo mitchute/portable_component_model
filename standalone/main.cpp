@@ -97,9 +97,9 @@ main_vars load_data() {
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
-    input_path = "../standalone/inputs/test.json"; // default path
+    input_path = "../standalone/inputs/test.json";                    // default path
 
-    //User inputs to change the above hard coded data. Can be commented out.
+    // User inputs to change the above hard coded data. Can be commented out.
     input_vars user_inputs = usr_inputs();
     load_vars.specific_heat = user_inputs.specific_heat_in;
     load_vars.heating_coefficients = user_inputs.heating_coefficients_in;
@@ -108,7 +108,8 @@ main_vars load_data() {
         input_path = user_inputs.json_path_in;
     }
 
-    std::cout << "-----------------------------------" << "\n";
+    std::cout << "-----------------------------------"
+              << "\n";
     std::cout << "Specific heat = " << load_vars.specific_heat << "\n";
     std::cout << "Heating coefficients = {" << load_vars.heating_coefficients[0] << ", " << load_vars.heating_coefficients[1] << ", "
               << load_vars.heating_coefficients[2] << "}"
@@ -116,7 +117,6 @@ main_vars load_data() {
     std::cout << "Cooling coefficients = {" << load_vars.cooling_coefficients[0] << ", " << load_vars.cooling_coefficients[1] << ", "
               << load_vars.cooling_coefficients[2] << "}"
               << "\n";
-
 
     // opening file and reading data
     std::cout << "Path to ghe config data is: " << input_path << std::endl;
@@ -150,7 +150,7 @@ main_vars load_data() {
 
 int main() {
 
-    std::vector < double > stand_in_cross;
+    std::vector<double> stand_in_cross;
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
@@ -172,7 +172,7 @@ int main() {
             << "\n";
     debug << "ghe.qn"
           << ","
-          << "ghe.ghe_Tin"
+          << "hp.outlet_temperature"
           << ","
           << "ghe.q_time[n]"
           << ","
@@ -193,7 +193,7 @@ int main() {
     main_vars inputs = load_data();
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
-    GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
+    GHE ghe(inputs.num_hours, 1, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
             inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
 
     // Run the model
@@ -215,11 +215,13 @@ int main() {
         // Finally, write data for each loop iteration
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
                 << bldgload << "\n";
-        debug << ghe.current_GHEload << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << ","
-              << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0] << "\n";
+        debug << ghe.current_GHEload << "," << hp.outlet_temperature << "," << ghe.hours_as_seconds << "," << ghe.ghe_load[hour] << ","
+              << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0]
+              << "\n";
         hour++;
     }
-    std::cout << "-----------------------------------" << "\n";
+    std::cout << "-----------------------------------"
+              << "\n";
     std::cout << "Executed for " << inputs.num_hours << " iterations"
               << "\n";
     std::cout << "csv outputs found at " << output_file_path << "\n";

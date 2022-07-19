@@ -2,9 +2,9 @@
 #include <GHE.h>
 #include <cmath>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <vector>
-#include <iterator>
 
 struct main_vars {
     double soil_temp = 10;
@@ -62,7 +62,7 @@ TEST_CASE("Test the GHE Model") {
 
     // load data for testing
     test_vars test_values = load_data();
-    std::vector < double > stand_in_cross;
+    std::vector<double> stand_in_cross;
     double BH_temp;
 
     // Setup output streams
@@ -96,23 +96,23 @@ TEST_CASE("Test the GHE Model") {
             << ","
             << "bldgload"
             << "\n";
-    debug << "ghe.qn"
+    debug << "ghe.current_GHEload"
           << ","
-          << "ghe.ghe_Tin"
+          << "hp.outlet_temperature"
           << ","
-          << "ghe.q_time[n]"
+          << "ghe.hours_as_seconds[hour]"
           << ","
-          << "ghe.ghe_load[n]"
+          << "ghe.ghe_load[hour]"
           << ","
-          << "ghe.q_lntts[n]"
+          << "ghe.calc_lntts[hour]"
           << ","
-          << "ghe.g_data[n]"
+          << "ghe.interp_g_self[hour]"
           << ","
-          << "ghe.ghe_Tout[n]"
+          << "ghe.outlet_temperature"
           << ","
-          << "ghe.ghe_Tf[n]"
+          << "ghe.MFT "
           << ","
-          << "ghe.c1"
+          << "ghe.c1[0]"
           << ","
           << "BH_temp"
           << "\n";
@@ -120,7 +120,7 @@ TEST_CASE("Test the GHE Model") {
     // Get objects for all the components around the loop
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
-    GHE ghe(inputs.num_hours, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
+    GHE ghe(inputs.num_hours, 1, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
             inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
 
     // Run the model
@@ -135,10 +135,12 @@ TEST_CASE("Test the GHE Model") {
         }
         // Now run the GHE
         BH_temp = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate, 0);
+
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
                 << inputs.building_load[hour] << "\n";
-        debug << ghe.current_GHEload << "," << ghe.ghe_Tin << "," << ghe.hours_as_seconds[hour] << "," << ghe.ghe_load[hour] << ","
-              << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0] << "," << BH_temp << "\n";
+        debug << ghe.current_GHEload << "," << hp.outlet_temperature << "," << ghe.hours_as_seconds << "," << ghe.ghe_load[hour] << ","
+              << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0] << ","
+              << BH_temp << "\n";
         CHECK(ghe.outlet_temperature == doctest::Approx(test_values.ghe_tout[hour]).epsilon(0.1));
     }
 }

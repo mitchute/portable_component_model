@@ -33,7 +33,7 @@ class GHE {
     double ts;
     double c0;
     void g_expander(int num_hour3s);
-    std::array < double, 2 >  summation(int hour);
+    std::array<double, 2> summation(int hour);
 
   public:
     double soil_temp;
@@ -44,21 +44,25 @@ class GHE {
     double rho_cp;
     double outlet_temperature = 0.0;
     double MFT;
-    double internal_BH_temp;
+    double internal_Tr;
+    double cross_Tr;
+    double BH_temp;
     double current_GHEload;
-    double ghe_Tin;
-    std::array < double, 2 > c1; //0 index is self, 1 index is cross
-    std::vector<double> g_func_self;        // g function output values
-    std::vector<double> lntts_self;         // g function input values
-    std::vector<double> g_func_cross;        // g function output values
-    std::vector<double> lntts_cross;         // g function input values
-    std::vector<int> hours_as_seconds; // hourly data as seconds
-    std::vector<double> calc_lntts;    // Calculated lntts values from num_time_steps
+    int hours_per_timestep;
+    int hours_as_seconds;             // hourly data as seconds
+    std::vector<double> calc_lntts;   // Calculated lntts values from num_time_steps
+    std::array<double, 2> c1;         // 0 index is self, 1 index is cross
+    std::vector<double> g_func_self;  // g function output values
+    std::vector<double> lntts_self;   // g function input values
+    std::vector<double> g_func_cross; // g function output values
+    std::vector<double> lntts_cross;  // g function input values
     std::vector<double> ghe_load;
-    std::vector<double> interp_g_self; // Interpolated g values from interp_lntts
+    std::vector<double> interp_g_self;  // Interpolated g values from interp_lntts
     std::vector<double> interp_g_cross; // Interpolated g values from interp_lntts
 
-    GHE(int num_hours, double soil_temp, double specific_heat, double bh_length, double bh_resistance, double soil_conduct, double rho_cp, std::vector<double> &g_func_self, std::vector<double> &lntts_self, std::vector<double> &g_func_cross, std::vector<double> &lntts_cross);
-    double simulate(int hour, double ghe_inlet_temperature, double mass_flow_rate, double external_BH_temp);
+    GHE(int num_time_steps, int hours_per_timestep, double soil_temp, double specific_heat, double bh_length, double bh_resistance,
+        double soil_conduct, double rho_cp, std::vector<double> &g_func_self, std::vector<double> &lntts_self, std::vector<double> &g_func_cross,
+        std::vector<double> &lntts_cross);
+    double simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double external_Tr);
 };
 #endif
