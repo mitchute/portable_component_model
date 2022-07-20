@@ -3,8 +3,6 @@
 #include <iostream>
 #include <json.hpp>
 
-// TODO: Add comments explaining parts of this main function
-
 using json = nlohmann::json;
 
 struct main_vars {
@@ -95,8 +93,8 @@ main_vars load_data() {
 
     // hardcoded data not found in json
     load_vars.specific_heat = 4200;
-    load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
+    load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
     input_path = "../standalone/inputs/A.json";                    // default path
 
 //    // User inputs to change the above hard coded data. Can be commented out.

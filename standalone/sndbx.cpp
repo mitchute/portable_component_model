@@ -105,9 +105,9 @@ main_vars load_data() {
     std::string input_path;
 
     // hardcoded data not found in json
-    load_vars.specific_heat = 4200;
-    load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.specific_heat = 825; //TODO: Talk to matt about this. Is the python model just running the loads as if they are the HP loads or the GHE loads?
+    load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
+    load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
     input_path = "../standalone/inputs/A-B.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
@@ -270,7 +270,7 @@ int main() {
         // Operate the heat pump using the last ghe outlet temperature as the new hp inlet temperature
         if (time_step == 0) {
             hp_a.outlet_temperature = 0;
-            // hp_b.outlet_temperature = 0;
+            hp_b.outlet_temperature = 0;
         } else {
             hp_a.operate(ghe_a.outlet_temperature, pump.flow_rate, bldgload[time_step]);
             hp_b.operate(ghe_b.outlet_temperature, pump.flow_rate, bldgload[time_step]);

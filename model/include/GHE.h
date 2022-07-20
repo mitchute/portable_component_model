@@ -7,7 +7,6 @@
 #include <vector>
 
 class Pump {
-    // TODO: This could be expanded to more logic, also should rename to specify mass or volume flow. Talk to Matt
     double fixed_flow_rate = 0.2;
 
   public:
