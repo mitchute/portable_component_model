@@ -121,7 +121,7 @@ TEST_CASE("Test the GHE Model") {
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
     GHE ghe(inputs.num_hours, 1, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
-            inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
+            inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross, true);
 
     // Run the model
     for (int hour = 0; hour < num_hours; hour++) {
@@ -134,7 +134,7 @@ TEST_CASE("Test the GHE Model") {
             hp.operate(ghe.outlet_temperature, pump.flow_rate, inputs.building_load[hour]);
         }
         // Now run the GHE
-        BH_temp = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate, 0);
+        BH_temp = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
 
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
                 << inputs.building_load[hour] << "\n";

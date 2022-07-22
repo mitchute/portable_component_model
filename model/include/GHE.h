@@ -26,8 +26,6 @@ class HeatPump {
     void operate(double inlet_temperature, double operating_flow_rate, double building_load);
 };
 
-// TODO: potentially add a new struct here that can be passed to GHE constructor instead passing each var individually
-
 class GHE {
     double ts;
     double c0;
@@ -49,6 +47,7 @@ class GHE {
     double current_GHEload;
     int hours_per_timestep;
     int hours_as_seconds;             // hourly data as seconds
+    bool load_from_building;
     std::vector<double> calc_lntts;   // Calculated lntts values from num_time_steps
     std::array<double, 2> c1;         // 0 index is self, 1 index is cross
     std::vector<double> g_func_self;  // g function output values
@@ -61,7 +60,7 @@ class GHE {
 
     GHE(int num_time_steps, int hours_per_timestep, double soil_temp, double specific_heat, double bh_length, double bh_resistance,
         double soil_conduct, double rho_cp, std::vector<double> &g_func_self, std::vector<double> &lntts_self, std::vector<double> &g_func_cross,
-        std::vector<double> &lntts_cross);
-    double simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double external_Tr);
+        std::vector<double> &lntts_cross, bool load_from_building);
+    double simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double GHE_load = 0, double external_Tr = 0);
 };
 #endif

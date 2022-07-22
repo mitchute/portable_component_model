@@ -192,7 +192,7 @@ int main() {
     Pump pump;
     HeatPump hp(inputs.heating_coefficients, inputs.cooling_coefficients);
     GHE ghe(inputs.num_hours, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
-            inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross);
+            inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross, false);
 
     //Build load vector for use with A.json
     std::vector<double> bldgload;
@@ -202,7 +202,7 @@ int main() {
         if (std::remainder(time_step, inputs.building_load.size()) == 0) {
             month = 0;
         }
-        bldgload.push_back(inputs.building_load[month]);
+        bldgload.push_back(-1* inputs.building_load[month]);
         month++;
     }
 
@@ -232,8 +232,11 @@ int main() {
             hp.operate(ghe.outlet_temperature, pump.flow_rate, buildload);
         }
 
+
+        double scaled_load = (buildload/(4*inputs.bh_length));
+        scaled_load = buildload;
         // Now run the GHE
-        ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate, 0);
+        ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate, scaled_load);
 
         // Finally, write data for each loop iteration
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","

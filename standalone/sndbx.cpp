@@ -3,6 +3,7 @@
 #include <GHE.h>
 #include <iostream>
 #include <json.hpp>
+#include <filesystem>
 
 using json = nlohmann::json;
 
@@ -22,6 +23,7 @@ struct main_vars {
     int num_bh_b;
     int timestep_start_b;
     int num_time_steps;
+    bool file_open;
     std::vector<double> g_self_a;
     std::vector<double> lntts_self_a;
     std::vector<double> g_cross_a;
@@ -105,9 +107,9 @@ main_vars load_data() {
     std::string input_path;
 
     // hardcoded data not found in json
-    load_vars.specific_heat = 825; //TODO: Talk to matt about this. Is the python model just running the loads as if they are the HP loads or the GHE loads?
-    load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.specific_heat = 4200;
+    load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
     input_path = "../standalone/inputs/A-B.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
@@ -135,8 +137,10 @@ main_vars load_data() {
     if (!file.is_open()) {
         std::cout << "Error, file is open" << std::endl;
         file.close();
-        exit(EXIT_FAILURE);
+        load_vars.file_open = true;
+        return load_vars;
     }
+    load_vars.file_open = false;
     file >> inputs;
     file.close();
 
@@ -175,6 +179,9 @@ int main() {
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
+    if (!std::filesystem::is_directory("../standalone/outputs/")) {
+        std::filesystem::create_directory("../standalone/outputs/");
+    }
     std::stringstream output_string;
     std::string output_file_path = "../standalone/outputs/outputs.csv";
     std::ofstream outputs(output_file_path);
@@ -199,53 +206,33 @@ int main() {
             << ","
             << "bldgload"
             << "\n";
-    debug << "time_step"
-          << ","
-          << "Tr_a"
-          << ","
-          << "Tr_b"
-          << ","
-          << "ghe_a.current_GHEload"
-          << ","
-          << "ghe_b.current_GHEload"
-          << ","
-          << "hp_a.outlet_temperature"
-          << ","
-          << "hp_b.outlet_temperature"
-          << ","
-          << "ghe_a.calc_lntts[time_step]"
-          << ","
-          << "ghe_b.calc_lntts[time_step]"
-          << ","
-          << "ghe_a.interp_g_self[time_step]"
-          << ","
-          << "ghe_b.interp_g_self[time_step]"
-          << ","
-          << "ghe_a.interp_g_cross[time_step]"
-          << ","
-          << "ghe_b.interp_g_cross[time_step]"
-          << ","
-          << "ghe_a.outlet_temperature"
-          << ","
-          << "ghe_b.outlet_temperature"
-          << ","
-          << "ghe_a.MFT"
-          << ","
-          << "ghe_b.MFT"
-          << ","
-          << "bldgload"
-          << "\n";
+    debug << "time_step" << ","
+          << "ghe_a.calc_lntts[time_step]" << ","
+          << "ghe_a.interp_g_self[time_step]" << ","
+          << "ghe_a.interp_g_cross[time_step]" << ","
+          << "ghe_a.current_GHEload" << ","
+          << "ghe_a.c1[0]" << ","
+          << "ghe_a.c1[1]" << ","
+          << "ghe_a.internal_Tr" << ","
+          << "ghe_b.cross_Tr" << ","
+          << "ghe_a.BH_temp" << ","
+          << "ghe_a.outlet_temperature" << ","
+          << "ghe_a.MFT" << ","
+          << "bldgload[time_step]" << "\n";
 
     // Create instances of classes
     main_vars inputs = load_data();
+    if (inputs.file_open){
+        return 1;
+    }
     Pump pump;
     HeatPump hp_a(inputs.heating_coefficients, inputs.cooling_coefficients);
     HeatPump hp_b(inputs.heating_coefficients, inputs.cooling_coefficients);
 
     GHE ghe_a(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, false);
     GHE ghe_b(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_b, inputs.bh_resistance_b,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, false);
 
     // reading and creating load vector
     std::vector<double> bldgload;
@@ -255,7 +242,7 @@ int main() {
         if (std::remainder(time_step, inputs.building_load.size()) == 0) {
             month = 0;
         }
-        bldgload.push_back(inputs.building_load[month]);
+        bldgload.push_back(-1*inputs.building_load[month]);
         month++;
     }
 
@@ -277,12 +264,15 @@ int main() {
         }
 
         // Now run the GHE
-        Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, Tr_b);
-        Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, Tr_a);
+        double scaled_load_a = (bldgload[time_step]/(4*inputs.bh_length_a)); // in order to match the load given by python
+        double scaled_load_b = (bldgload[time_step]/(4*inputs.bh_length_b)); // in order to match the load given by python
+
+        Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
+        Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b,Tr_a);
 
         // Finally, write data for each loop iteration
-        outputs << time_step << "," << ghe_a.ghe_load.back() << ","
-                << ghe_b.ghe_load.back()
+        outputs << time_step << "," << -1*ghe_a.ghe_load.back() << ","
+                << -1*ghe_b.ghe_load.back()
                 << "," << hp_a.outlet_temperature << ","
                 << hp_b.outlet_temperature
                 << "," << ghe_a.outlet_temperature << ","
@@ -290,23 +280,19 @@ int main() {
                 << "," << ghe_a.MFT << ","
                 << ghe_b.MFT
                 << "," << bldgload[time_step] << "\n";
-        debug << time_step << "," << Tr_a << ","
-              << Tr_b
-              << "," << ghe_a.current_GHEload << ","
-              << ghe_b.current_GHEload
-              << "," << hp_a.outlet_temperature << ","
-              << hp_b.outlet_temperature
-              << "," << ghe_a.calc_lntts[time_step] << ","
-              << ghe_b.calc_lntts[time_step]
-              << "," << ghe_a.interp_g_self[time_step] << ","
-              << ghe_b.interp_g_self[time_step]
-              << "," << ghe_a.interp_g_cross[time_step] << ","
-              << ghe_b.interp_g_cross[time_step]
-              << "," << ghe_a.outlet_temperature << ","
-              << ghe_b.outlet_temperature
-              << "," << ghe_a.MFT << ","
-              << ghe_b.MFT
-              << "," << bldgload[time_step] << "\n";
+        debug << time_step << ","
+              << ghe_a.calc_lntts[time_step] << ","
+              << ghe_a.interp_g_self[time_step] << ","
+              << ghe_b.interp_g_cross[time_step] << ","
+              << ghe_a.current_GHEload << ","
+              << ghe_a.c1[0] << ","
+              << ghe_a.c1[1] << ","
+              << ghe_a.internal_Tr << ","
+              << ghe_b.cross_Tr << ","
+              << ghe_a.BH_temp << ","
+              << ghe_a.outlet_temperature << ","
+              << ghe_a.MFT << ","
+              << scaled_load_a << "\n";
     }
     std::cout << "Executed for " << inputs.num_time_steps << " iterations"
               << "\n";
@@ -316,4 +302,6 @@ int main() {
 
 // Notes for hunting down exponential behavior:
 // g function both self and cross matches the python code exactly after interpolation, so not source of error
-//  Variables with exponential behavior:
+// Input loads are identical
+// See debug function
+//      summation values are what show the exponential behavior

@@ -7,8 +7,6 @@
 #include <cmath>
 #include <iostream>
 
-// TODO: move these descriptions to a README.txt file that explain model and vars.
-
 // Variables (See nomenclature section):
 // H - active borehole length (Active length of pipe)
 // Rb - borehole Resistance
@@ -50,7 +48,7 @@ void HeatPump::operate(double inlet_temperature, double operating_flow_rate, dou
 
 GHE::GHE(int num_time_steps, int hours_per_timestep_in, double soil_temp_in, double specific_heat_in, double bh_length_in, double bh_resistance_in,
          double soil_conduct_in, double rho_cp_in, std::vector<double> &g_func_self_in, std::vector<double> &lntts_self_in,
-         std::vector<double> &g_func_cross_in, std::vector<double> &lntts_cross_in) {
+         std::vector<double> &g_func_cross_in, std::vector<double> &lntts_cross_in, bool load_from_building_in) {
 
     soil_temp = soil_temp_in;
     specific_heat = specific_heat_in;
@@ -63,6 +61,7 @@ GHE::GHE(int num_time_steps, int hours_per_timestep_in, double soil_temp_in, dou
     g_func_cross = g_func_cross_in;
     lntts_cross = lntts_cross_in;
     hours_per_timestep = hours_per_timestep_in;
+    load_from_building = load_from_building_in;
     calc_lntts.reserve(num_time_steps);
     ghe_load.reserve(num_time_steps);
     interp_g_self.reserve(num_time_steps);
@@ -160,7 +159,7 @@ std::array<double, 2> GHE::summation(int time_step) {
     return total; // 0 index is self, 1 index is cross
 }
 
-double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double external_Tr) {
+double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_flow_rate, double GHE_load, double external_Tr) {
     // loading g_data
     double gn_self = interp_g_self[time_step];
     double gn_cross = interp_g_cross[time_step];
@@ -173,10 +172,16 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
     if (time_step > 0) {
         previous_GHEload = ghe_load[time_step - 1];
     }
-    current_GHEload = 0.0;
-    if (time_step > 0) {
-        current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
-                          ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
+
+    if (load_from_building) {
+        current_GHEload = 0.0;
+        if (time_step > 0) {
+            current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
+                              ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
+        }
+    }
+    else {
+        current_GHEload = GHE_load;
     }
     ghe_load.push_back(current_GHEload);
 
