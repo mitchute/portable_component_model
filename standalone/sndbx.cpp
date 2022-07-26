@@ -108,8 +108,8 @@ main_vars load_data() {
 
     // hardcoded data not found in json
     load_vars.specific_heat = 4200;
-    load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
+    load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
     input_path = "../standalone/inputs/A-B.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
@@ -230,9 +230,9 @@ int main() {
     HeatPump hp_b(inputs.heating_coefficients, inputs.cooling_coefficients);
 
     GHE ghe_a(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, false);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, true);
     GHE ghe_b(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_b, inputs.bh_resistance_b,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, false);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, true);
 
     // reading and creating load vector
     std::vector<double> bldgload;
@@ -242,7 +242,7 @@ int main() {
         if (std::remainder(time_step, inputs.building_load.size()) == 0) {
             month = 0;
         }
-        bldgload.push_back(-1*inputs.building_load[month]);
+        bldgload.push_back(inputs.building_load[month]);
         month++;
     }
 
@@ -268,7 +268,7 @@ int main() {
         double scaled_load_b = (bldgload[time_step]/(4*inputs.bh_length_b)); // in order to match the load given by python
 
         Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
-        Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b,Tr_a);
+        Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b, Tr_a);
 
         // Finally, write data for each loop iteration
         outputs << time_step << "," << -1*ghe_a.ghe_load.back() << ","

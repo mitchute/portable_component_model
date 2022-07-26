@@ -139,39 +139,19 @@ void GHE::g_expander(int num_time_steps) {
 // Summation eqn 1.11 from Mitchell Appendix A
 std::array<double, 2> GHE::summation(int time_step) {
     std::array<double, 2> total = {0, 0};
-    if (!load_from_building){
-        int i = 0;
-        int j = time_step;
-        while ((i-1) < time_step) {
-            if (i == 0) {
-                q_delta = ghe_load[i] - 0;
-            } else {
-                q_delta = ghe_load[i] - ghe_load[i - 1];
-            }
-            // eqn 1.11
-            total[0] = total[0] + (q_delta * interp_g_self[j]);
-            total[1] = total[1] + (q_delta * interp_g_cross[j]);
-            j = j - 1;
-            ++i;
+    int i = 0;
+    int j = time_step;
+    while (i <= time_step) {
+        if (i == 0) {
+            q_delta = ghe_load[i] - 0;
+        } else {
+            q_delta = ghe_load[i] - ghe_load[i - 1];
         }
-    }
-    else {
-        int i = 0;
-        int j = time_step;
-        if (time_step != 0) {
-            while (i < time_step) {
-                if (i == 0) {
-                    q_delta = ghe_load[i] - 0;
-                } else {
-                    q_delta = ghe_load[i] - ghe_load[i - 1];
-                }
-                // eqn 1.11
-                total[0] = total[0] + (q_delta * interp_g_self[j]);
-                total[1] = total[1] + (q_delta * interp_g_cross[j]);
-                j = j - 1;
-                ++i;
-            }
-        }
+        // eqn 1.11
+        total[0] = total[0] + (q_delta * interp_g_self[j]);
+        total[1] = total[1] + (q_delta * interp_g_cross[j]);
+        j = j - 1;
+        ++i;
     }
     return total; // 0 index is self, 1 index is cross
 }
@@ -184,11 +164,16 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
     // calculating current load and appending to data
     if (load_from_building) {
         double previous_GHEload = 0.0;
-        c1 = summation(time_step); // 0 index is self, 1 index is cross
         if (time_step > 0) {
+            c1 = summation(time_step - 1); // 0 index is self, 1 index is cross
             previous_GHEload = ghe_load[time_step - 1];
             current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
                               ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
+        }
+        else {
+            current_GHEload = (ghe_inlet_temperature - soil_temp) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
+            c1 = {current_GHEload * gn_self, current_GHEload * gn_cross};
+
         }
         ghe_load.push_back(current_GHEload);
         internal_Tr = c0 * (((current_GHEload - previous_GHEload) * gn_self) + c1[0]);
@@ -211,5 +196,6 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
     MFT = (current_GHEload * bh_resistance) + BH_temp;
     // 1.14
     outlet_temperature = MFT - 0.5 * ((current_GHEload * bh_length) / (mass_flow_rate * specific_heat));
+    std::cout << c1[0] << "\n";
     return cross_Tr;
 }

@@ -95,7 +95,7 @@ main_vars load_data() {
     load_vars.specific_heat = 4200;
     load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
-    input_path = "../standalone/inputs/A.json";                    // default path
+    input_path = "../standalone/inputs/test.json";                    // default path
 
 //    // User inputs to change the above hard coded data. Can be commented out.
 //    input_vars user_inputs = usr_inputs();
@@ -153,9 +153,9 @@ int main() {
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
     std::stringstream output_string;
-    std::string output_file_path = "../standalone/outputs/outputs.csv";
+    std::string output_file_path = "../standalone/outputs/test_outputs.csv";
     std::ofstream outputs(output_file_path);
-    std::ofstream debug("../standalone/outputs/debug.csv");
+    std::ofstream debug("../standalone/outputs/test_debug.csv");
     outputs << "n"
             << ","
             << "GHE Load"
@@ -194,26 +194,26 @@ int main() {
     GHE ghe(inputs.num_hours, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length, inputs.bh_resistance, inputs.soil_conduct, inputs.rho_cp,
             inputs.g_func, inputs.lntts, stand_in_cross, stand_in_cross, false);
 
-    //Build load vector for use with A.json
-    std::vector<double> bldgload;
-    bldgload.reserve(inputs.num_hours);
-    int month = 0;
-    for (int time_step = 0; time_step < inputs.num_hours; time_step++) {
-        if (std::remainder(time_step, inputs.building_load.size()) == 0) {
-            month = 0;
-        }
-        bldgload.push_back(-1* inputs.building_load[month]);
-        month++;
-    }
+    // //Build load vector for use with A.json
+    // std::vector<double> bldgload;
+    // bldgload.reserve(inputs.num_hours);
+    // int month = 0;
+    // for (int time_step = 0; time_step < inputs.num_hours; time_step++) {
+    //     if (std::remainder(time_step, inputs.building_load.size()) == 0) {
+    //         month = 0;
+    //     }
+    //     bldgload.push_back(-1* inputs.building_load[month]);
+    //     month++;
+    // }
 
 //    //Build load vector for with test.json
-//    double bldgn = -1000;
+//    double bldgn = 1000;
 //    inputs.building_load.clear();
 //    inputs.building_load.reserve(inputs.num_hours);
 //    for (int j = 0; j <= inputs.num_hours; j++) {
 //        // Update the building load
 //        if (std::remainder(j, 730) == 0) {
-//            bldgn = bldgn * -1;
+//            bldgn = bldgn * -1 / inputs.bh_length;
 //        }
 //        inputs.building_load.push_back(bldgn);
 //    }
@@ -221,7 +221,8 @@ int main() {
 
     // Run the model
     int hour = 0;
-    for (double buildload : bldgload) {
+    for (double buildload : inputs.building_load) {
+        buildload = -1 * buildload / inputs.bh_length;
         // Operate the pump to set the loop flow rate
         pump.set_flow_rate();
 
