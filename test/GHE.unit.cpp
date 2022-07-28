@@ -67,7 +67,7 @@ TEST_CASE("Test the GHE Model") {
     // load data for testing
     test_vars test_values = load_data();
     std::vector<double> stand_in_cross;
-    double BH_temp;
+    double cross_Tr;
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
@@ -118,7 +118,7 @@ TEST_CASE("Test the GHE Model") {
           << ","
           << "ghe.c1[0]"
           << ","
-          << "BH_temp"
+          << "cross_Tr"
           << "\n";
 
     // Get objects for all the components around the loop
@@ -140,16 +140,15 @@ TEST_CASE("Test the GHE Model") {
         }
         
         // Now run the GHE
-        BH_temp = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
+        cross_Tr = ghe.simulate(hour, hp.outlet_temperature, pump.flow_rate);
 
         outputs << hour << "," << ghe.ghe_load.back() << "," << hp.outlet_temperature << "," << ghe.outlet_temperature << "," << ghe.MFT << ","
                 << inputs.building_load[hour] << "\n";
         debug << ghe.current_GHEload << "," << hp.outlet_temperature << "," << ghe.hours_as_seconds << "," << ghe.ghe_load[hour] << ","
               << ghe.calc_lntts[hour] << "," << ghe.interp_g_self[hour] << "," << ghe.outlet_temperature << "," << ghe.MFT << "," << ghe.c1[0] << ","
-              << BH_temp << "\n";
+              << cross_Tr << "\n";
         if (hour > 5){
-            CHECK(ghe.outlet_temperature == doctest::Approx(test_values.ghe_tout[hour]).epsilon(0.1));
+            CHECK(ghe.outlet_temperature == doctest::Approx(test_values.ghe_tout[hour]).epsilon(0.25));
         }
-        
     }
 }

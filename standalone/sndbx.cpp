@@ -108,8 +108,8 @@ main_vars load_data() {
 
     // hardcoded data not found in json
     load_vars.specific_heat = 4200;
-    load_vars.cooling_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
-    load_vars.heating_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
+    load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
+    load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
     input_path = "../standalone/inputs/A-B.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
@@ -242,7 +242,7 @@ int main() {
         if (std::remainder(time_step, inputs.building_load.size()) == 0) {
             month = 0;
         }
-        bldgload.push_back(inputs.building_load[month]);
+        bldgload.push_back(-1*inputs.building_load[month]);
         month++;
     }
 
@@ -264,9 +264,9 @@ int main() {
         }
 
         // Now run the GHE
-        double scaled_load_a = (bldgload[time_step]/(4*inputs.bh_length_a)); // in order to match the load given by python
-        double scaled_load_b = (bldgload[time_step]/(4*inputs.bh_length_b)); // in order to match the load given by python
-
+        double scaled_load_a = (bldgload[time_step]/(4*inputs.bh_length_a)); // Only for passing load directly, to match python
+        double scaled_load_b = (bldgload[time_step]/(4*inputs.bh_length_b)); // Only for passing load directly, to match python
+        
         Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
         Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b, Tr_a);
 
@@ -292,16 +292,10 @@ int main() {
               << ghe_a.BH_temp << ","
               << ghe_a.outlet_temperature << ","
               << ghe_a.MFT << ","
-              << scaled_load_a << "\n";
+              << bldgload[time_step] << "\n";
     }
     std::cout << "Executed for " << inputs.num_time_steps << " iterations"
               << "\n";
     std::cout << "csv outputs found at " << output_file_path << std::endl;
     return 0;
 }
-
-// Notes for hunting down exponential behavior:
-// g function both self and cross matches the python code exactly after interpolation, so not source of error
-// Input loads are identical
-// See debug function
-//      summation values are what show the exponential behavior

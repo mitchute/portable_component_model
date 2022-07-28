@@ -100,6 +100,49 @@ TEST_CASE("Test GHE Multi Borehole") {
 
     std::vector<double> MFT = load_test(); 
 
+    // Setup output streams
+    // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
+    if (!std::filesystem::is_directory("../standalone/outputs/")) {
+        std::filesystem::create_directory("../standalone/outputs/");
+    }
+    std::stringstream output_string;
+    std::string output_file_path = "../standalone/outputs/multi_outputs.csv";
+    std::ofstream outputs(output_file_path);
+    std::ofstream debug("../standalone/outputs/multi_debug.csv");
+    outputs << "n"
+            << ","
+            << "A: GHE Load"
+            << ","
+            << "B: GHE Load"
+            << ","
+            << "A: ghe_Tin (HP_Tout)"
+            << ","
+            << "B: ghe_Tin (HP_Tout)"
+            << ","
+            << "A: ghe_Tout (HP_Tin)"
+            << ","
+            << "B: ghe_Tout (HP_Tin)"
+            << ","
+            << "A: MFT"
+            << ","
+            << "B: MFT"
+            << ","
+            << "bldgload"
+            << "\n";
+    debug << "time_step" << ","
+          << "ghe_a.calc_lntts[time_step]" << ","
+          << "ghe_a.interp_g_self[time_step]" << ","
+          << "ghe_a.interp_g_cross[time_step]" << ","
+          << "ghe_a.current_GHEload" << ","
+          << "ghe_a.c1[0]" << ","
+          << "ghe_a.c1[1]" << ","
+          << "ghe_a.internal_Tr" << ","
+          << "ghe_b.cross_Tr" << ","
+          << "ghe_a.BH_temp" << ","
+          << "ghe_a.outlet_temperature" << ","
+          << "ghe_a.MFT" << ","
+          << "bldgload[time_step]" << "\n";
+
     // Create instances of classes
     main_vars inputs = load_data();
     Pump pump;
@@ -136,6 +179,29 @@ TEST_CASE("Test GHE Multi Borehole") {
 
         Tr_a = ghe_a.simulate(time_step, 0, pump.flow_rate, scaled_load_a, Tr_b);
         Tr_b = ghe_b.simulate(time_step, 0, pump.flow_rate, scaled_load_b,Tr_a);
+               // Finally, write data for each loop iteration
+        outputs << time_step << "," << -1*ghe_a.ghe_load.back() << ","
+                << -1*ghe_b.ghe_load.back()
+                << "," << "hp_a.outlet_temperature" << ","
+                << "hp_b.outlet_temperature"
+                << "," << ghe_a.outlet_temperature << ","
+                << ghe_b.outlet_temperature
+                << "," << ghe_a.MFT << ","
+                << ghe_b.MFT
+                << "," << bldgload[time_step] << "\n";
+        debug << time_step << ","
+              << ghe_a.calc_lntts[time_step] << ","
+              << ghe_a.interp_g_self[time_step] << ","
+              << ghe_b.interp_g_cross[time_step] << ","
+              << ghe_a.current_GHEload << ","
+              << ghe_a.c1[0] << ","
+              << ghe_a.c1[1] << ","
+              << ghe_a.internal_Tr << ","
+              << ghe_b.cross_Tr << ","
+              << ghe_a.BH_temp << ","
+              << ghe_a.outlet_temperature << ","
+              << ghe_a.MFT << ","
+              << bldgload[time_step] << "\n";
 
         CHECK(ghe_a.MFT == doctest::Approx(MFT[time_step]).epsilon(0.1));
     }

@@ -93,7 +93,6 @@ void GHE::g_expander(int num_time_steps) {
             // Extrapolating beyond the lower bound
             interp_g_self.push_back(g_func_self.front());
             std::cout << "SELF: Extrapolating beyond the lower bound index = " << n << "\n";
-            std::cout << g_func_self.front() << "\n";
         } else if (upper_it == lntts_self_end) {
             // Extrapolating beyond the upper bound
             interp_g_self.push_back(g_func_self.back());
@@ -114,7 +113,6 @@ void GHE::g_expander(int num_time_steps) {
                 // Extrapolating beyond the lower bound
                 interp_g_cross.push_back(g_func_cross.front());
                 std::cout << "CROSS: Extrapolating beyond the lower bound index = " << n << "\n";
-                std::cout << g_func_cross.front() << "\n";
             } else if (upper_it_cross == lntts_cross_end) {
                 // Extrapolating beyond the upper bound
                 interp_g_cross.push_back(g_func_cross.back());
@@ -150,6 +148,8 @@ std::array<double, 2> GHE::summation(int time_step) {
         // eqn 1.11
         total[0] = total[0] + (q_delta * interp_g_self[j]);
         total[1] = total[1] + (q_delta * interp_g_cross[j]);
+        if (j == 0) {
+        }
         j = j - 1;
         ++i;
     }
@@ -165,37 +165,27 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
     if (load_from_building) {
         double previous_GHEload = 0.0;
         if (time_step > 0) {
-            c1 = summation(time_step - 1); // 0 index is self, 1 index is cross
             previous_GHEload = ghe_load[time_step - 1];
             current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
                               ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
         }
         else {
             current_GHEload = (ghe_inlet_temperature - soil_temp) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
-            c1 = {current_GHEload * gn_self, current_GHEload * gn_cross};
 
         }
-        ghe_load.push_back(current_GHEload);
-        internal_Tr = c0 * (((current_GHEload - previous_GHEload) * gn_self) + c1[0]);
-        cross_Tr = c0 * (((current_GHEload - previous_GHEload) * gn_cross) + c1[1]);
     }
     else {
         current_GHEload = GHE_load;
-        ghe_load.push_back(current_GHEload);
-        c1 = summation(time_step); // 0 index is self, 1 index is cross
-        // 1.12
-        if (time_step > 0) {
-            internal_Tr = c0 * c1[0];
-            cross_Tr = c0 * c1[1];
-        } else {
-            internal_Tr = c0 * current_GHEload * gn_self;
-            cross_Tr = c0 * current_GHEload * gn_cross;
-        }
+        
     }
+    ghe_load.push_back(current_GHEload);
+    c1 = summation(time_step); // 0 index is self, 1 index is cross
+    internal_Tr = c0 * c1[0];
+    cross_Tr = c0 * c1[1];
     BH_temp = (soil_temp) + (internal_Tr) + (external_Tr);
     MFT = (current_GHEload * bh_resistance) + BH_temp;
     // 1.14
     outlet_temperature = MFT - 0.5 * ((current_GHEload * bh_length) / (mass_flow_rate * specific_heat));
-    std::cout << c1[0] << "\n";
+    std::cout << c0 << "\n";
     return cross_Tr;
 }
