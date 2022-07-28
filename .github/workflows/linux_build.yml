@@ -4,10 +4,7 @@ on: [push]
 
 jobs:
   linux_release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04]
+    runs-on: ubuntu-20.04
 
     steps:
     - uses: actions/checkout@v2
@@ -30,6 +27,9 @@ jobs:
 
     - name: Print Build Tree
       run: tree build/
+
+    - name: Run Unit Tests
+      run: build/model_test
 
     - name: Run EnergyPlus
       run: build/mock_energyplus
