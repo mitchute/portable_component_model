@@ -110,7 +110,7 @@ main_vars load_data() {
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
-    input_path = "../standalone/inputs/A-B.json";                     // default path
+    input_path = "../standalone/inputs/A-B-Annual.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
     //    input_vars user_inputs = usr_inputs();
@@ -183,9 +183,9 @@ int main() {
         std::filesystem::create_directory("../standalone/outputs/");
     }
     std::stringstream output_string;
-    std::string output_file_path = "../standalone/outputs/outputs.csv";
+    std::string output_file_path = "../standalone/outputs/multi_outputs.csv";
     std::ofstream outputs(output_file_path);
-    std::ofstream debug("../standalone/outputs/debug.csv");
+    std::ofstream debug("../standalone/outputs/multi_debug.csv");
     outputs << "n"
             << ","
             << "A: GHE Load"
@@ -242,7 +242,7 @@ int main() {
         if (std::remainder(time_step, inputs.building_load.size()) == 0) {
             month = 0;
         }
-        bldgload.push_back(-1*inputs.building_load[month]);
+        bldgload.push_back(0.5 * inputs.building_load[month]);
         month++;
     }
 

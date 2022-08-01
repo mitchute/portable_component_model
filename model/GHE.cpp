@@ -186,6 +186,5 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
     MFT = (current_GHEload * bh_resistance) + BH_temp;
     // 1.14
     outlet_temperature = MFT - 0.5 * ((current_GHEload * bh_length) / (mass_flow_rate * specific_heat));
-    std::cout << c0 << "\n";
     return cross_Tr;
 }

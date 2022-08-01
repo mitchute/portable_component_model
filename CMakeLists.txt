@@ -47,15 +47,25 @@ target_link_libraries(model model_lib)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
 target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
-#sndbx executable
+# single model executable
 add_executable(
-        sndbx
-        ${PROJECT_SOURCE_DIR}/standalone/sndbx.cpp
+        single_model
+        ${PROJECT_SOURCE_DIR}/standalone/single.cpp
 )
 
-target_link_libraries(sndbx model_lib)
-target_include_directories(sndbx PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
-target_include_directories(sndbx PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
+target_link_libraries(single_model model_lib)
+target_include_directories(single_model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(single_model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
+
+#multi model executable
+add_executable(
+        multi_model
+        ${PROJECT_SOURCE_DIR}/standalone/multi.cpp
+)
+
+target_link_libraries(multi_model model_lib)
+target_include_directories(multi_model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(multi_model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
 # this is the type of build rules if this was built as a part of EnergyPlus
 # add_executable(
