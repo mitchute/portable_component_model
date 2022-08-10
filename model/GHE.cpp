@@ -22,12 +22,8 @@
 // q_load - load data
 // q_time - time data corresponding to each ghe_load value
 // q_lntts - calculated non-dimensionalized time for q_time
-// n - index of main loop
-// m - number of iterations of main loop
 // c1 - history terms
 // c0 - simplification term
-// qn - current GHE load
-// qn1 - previous iteration GHE load
 // q_delta - GHE load delta
 // total - total of summation equation. Defined in function
 // inputs - data structure with inputs read from the JSON file
@@ -76,7 +72,7 @@ GHE::GHE(int num_time_steps, int hours_per_timestep_in, double soil_temp_in, dou
     g_expander(num_time_steps);
 }
 
-// Expanding g data as step function so that it has same length as q_load
+// Expanding g data as step function so that it has same length as q_load via linear interpolation
 void GHE::g_expander(int num_time_steps) {
     int n = 0;
     auto lntts_self_begin = lntts_self.begin();
@@ -134,7 +130,7 @@ void GHE::g_expander(int num_time_steps) {
     }
 }
 
-// Summation eqn 1.11 from Mitchell Appendix A
+// Summation eqn 1.11 from Mitchell Appendix A known as c1
 std::array<double, 2> GHE::summation(int time_step) {
     std::array<double, 2> total = {0, 0};
     int i = 0;
@@ -148,8 +144,6 @@ std::array<double, 2> GHE::summation(int time_step) {
         // eqn 1.11
         total[0] = total[0] + (q_delta * interp_g_self[j]);
         total[1] = total[1] + (q_delta * interp_g_cross[j]);
-        if (j == 0) {
-        }
         j = j - 1;
         ++i;
     }
@@ -163,28 +157,26 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
 
     // calculating current load and appending to data
     if (load_from_building) {
-        double previous_GHEload = 0.0;
+        // If ghe is constructed to pass the load through the heatpump, this called
         if (time_step > 0) {
-            previous_GHEload = ghe_load[time_step - 1];
-            current_GHEload = (ghe_inlet_temperature - soil_temp + ((previous_GHEload * gn_self) * c0) - (c1[0] * c0)) /
+            current_GHEload = (ghe_inlet_temperature - soil_temp + ((ghe_load.back() * gn_self) * c0) - (c1[0] * c0)) /
                               ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
         }
         else {
-            current_GHEload = (ghe_inlet_temperature - soil_temp) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
-
+            current_GHEload = (ghe_inlet_temperature - soil_temp - (c1[0] * c0)) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
         }
     }
     else {
+        //If ghe is constructed to pass the load directly to the ghe, this is called.
         current_GHEload = GHE_load;
-        
     }
+
     ghe_load.push_back(current_GHEload);
     c1 = summation(time_step); // 0 index is self, 1 index is cross
     internal_Tr = c0 * c1[0];
     cross_Tr = c0 * c1[1];
     BH_temp = (soil_temp) + (internal_Tr) + (external_Tr);
-    MFT = (current_GHEload * bh_resistance) + BH_temp;
-    // 1.14
-    outlet_temperature = MFT - 0.5 * ((current_GHEload * bh_length) / (mass_flow_rate * specific_heat));
+    MFT = (ghe_load[time_step] * bh_resistance) + BH_temp;
+    outlet_temperature = MFT - 0.5 * ((ghe_load[time_step] * bh_length) / (mass_flow_rate * specific_heat));
     return cross_Tr;
 }

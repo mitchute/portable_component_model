@@ -106,9 +106,9 @@ TEST_CASE("Test GHE Multi Borehole") {
         std::filesystem::create_directory("../standalone/outputs/");
     }
     std::stringstream output_string;
-    std::string output_file_path = "../standalone/outputs/multi_outputs.csv";
+    std::string output_file_path = "../test/outputs/mtest_outputs.csv";
     std::ofstream outputs(output_file_path);
-    std::ofstream debug("../standalone/outputs/multi_debug.csv");
+    std::ofstream debug("../test/outputs/mtest_debug.csv");
     outputs << "n"
             << ","
             << "A: GHE Load"
@@ -203,7 +203,8 @@ TEST_CASE("Test GHE Multi Borehole") {
               << ghe_a.MFT << ","
               << bldgload[time_step] << "\n";
 
-        CHECK(ghe_a.MFT == doctest::Approx(MFT[time_step]).epsilon(0.1));
+        CHECK(ghe_a.MFT == doctest::Approx(MFT[time_step]).epsilon(0.01));
+        std::cout<< time_step << "\n";
     }
 }
 

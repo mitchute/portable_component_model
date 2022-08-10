@@ -110,7 +110,7 @@ main_vars load_data() {
     load_vars.specific_heat = 4200;
     load_vars.heating_coefficients = {0.705459, 0.005447, -0.000077}; // HP heating coefficients hard coded from GLHEPro
     load_vars.cooling_coefficients = {1.092440, 0.000314, 0.000114};  // HP cooling coefficients hard coded from GLHEPro
-    input_path = "../standalone/inputs/A-B-Annual.json";                     // default path
+    input_path = "../standalone/inputs/A-B.json";                     // default path
 
     // User inputs to change the above hard coded data. Can be commented out.
     //    input_vars user_inputs = usr_inputs();
@@ -264,8 +264,8 @@ int main() {
         }
 
         // Now run the GHE
-        double scaled_load_a = (bldgload[time_step]/(4*inputs.bh_length_a)); // Only for passing load directly, to match python
-        double scaled_load_b = (bldgload[time_step]/(4*inputs.bh_length_b)); // Only for passing load directly, to match python
+        double scaled_load_a = (-1*bldgload[time_step]/inputs.bh_length_a); // Only for passing load directly, to match python
+        double scaled_load_b = (-1*bldgload[time_step]/inputs.bh_length_b); // Only for passing load directly, to match python
         
         Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
         Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b, Tr_a);
@@ -299,3 +299,7 @@ int main() {
     std::cout << "csv outputs found at " << output_file_path << std::endl;
     return 0;
 }
+
+//Notes for debugging: 
+
+//After talking to Matt we determined problem is the G-function. Looking at outputs from running test.json and C.json in the same code (single.cpp) there are spikes in Tout that occur in C.json that arent in test.json. Vice versa there are spikes in c1[0] in test.json that arent in C.json. Becasue the loads are constant and change at identical times this means the error has to be in the g function 

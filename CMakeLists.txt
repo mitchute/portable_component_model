@@ -16,14 +16,15 @@ target_include_directories(model_lib PRIVATE ${PROJECT_SOURCE_DIR}/model/include
 
 # model library tests
 add_executable(
-        model_test
+        single_test
         ${PROJECT_SOURCE_DIR}/test/doctest.h
         ${PROJECT_SOURCE_DIR}/test/main_test.cpp
-        ${PROJECT_SOURCE_DIR}/test/GHE.unit.cpp
+        ${PROJECT_SOURCE_DIR}/test/GHE_single.unit.cpp
 )
 
-target_link_libraries(model_test model_lib)
-target_include_directories(model_test PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_link_libraries(single_test model_lib)
+target_include_directories(single_test PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
+target_include_directories(single_test PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
 add_executable(
         multi_test
@@ -35,17 +36,6 @@ add_executable(
 target_link_libraries(multi_test model_lib)
 target_include_directories(multi_test PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
 target_include_directories(multi_test PRIVATE ${PROJECT_SOURCE_DIR}/test/include/nlohmann)
-
-
-# standalone executable
-add_executable(
-        model
-        ${PROJECT_SOURCE_DIR}/standalone/main.cpp
-)
-
-target_link_libraries(model model_lib)
-target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/model/include)
-target_include_directories(model PRIVATE ${PROJECT_SOURCE_DIR}/standalone/include/nlohmann)
 
 # single model executable
 add_executable(
