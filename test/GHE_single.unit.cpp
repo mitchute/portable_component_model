@@ -89,7 +89,7 @@ main_vars load_data() {
 }
 
 
-test_vars load_GLHE_data() {
+test_vars load_test_data() {
     test_vars test_values;
     std::ifstream GLHEPro_gheTout("../test/inputs/GLHEPro_gheTout.txt");
     std::ifstream GHESim_MFT("../test/inputs/GHESim_MFT.txt");
@@ -105,13 +105,13 @@ test_vars load_GLHE_data() {
     return test_values;
 }
 
-TEST_CASE("Test Building loaded GHE Single Borehole") {
+TEST_CASE("Single Borehole Building Load") {
 
     std::cout << "Test Building loaded GHE Single Borehole" << "\n";
 
     std::vector <double> stand_in;
 
-    test_vars test_values = load_GLHE_data();
+    test_vars test_values = load_test_data();
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
@@ -214,15 +214,21 @@ TEST_CASE("Test Building loaded GHE Single Borehole") {
             CHECK(ghe_a.outlet_temperature == doctest::Approx(test_values.ghe_tout[time_step]).epsilon(0.01));
         }
     }
+    std::cout << "Executed for " << inputs.num_time_steps << " iterations"
+              << "\n";
+    std::cout << "412 failures in test is expected. These correspond to time_steps near load switching heating <-> cooling" << "\n";
+    std::cout << "csv outputs found at " << output_file_path << "\n";
+    std::cout << "--------------------" << std::endl;
+
 }
 
-TEST_CASE("Test GHE Loaded Single Borehole") {
+TEST_CASE("Single Borehole Direct Load") {
 
     std::cout << "Test GHE Loaded Single Borehole" << "\n";
 
     std::vector <double> stand_in;
 
-    test_vars test_values = load_GLHE_data();
+    test_vars test_values = load_test_data();
 
     // Setup output streams
     // Note: data will be cleared for each run. Make sure to save data in a separate directory before running again.
@@ -318,4 +324,7 @@ TEST_CASE("Test GHE Loaded Single Borehole") {
             CHECK(ghe_a.MFT == doctest::Approx(test_values.ghe_MFT[time_step]).epsilon(0.01));
         }
     }
+    std::cout << "Executed for " << inputs.num_time_steps << " iterations"
+              << "\n";
+    std::cout << "csv outputs found at " << output_file_path << std::endl;
 }

@@ -5,9 +5,7 @@
 cmake-build-debug
 build
 outputs/*
-/standalone/inputs/*
 /standalone/outputs/*
-/test/inputs/*
 /test/outputs/*
 
 
