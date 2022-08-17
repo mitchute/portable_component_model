@@ -230,9 +230,9 @@ int main() {
     HeatPump hp_b(inputs.heating_coefficients, inputs.cooling_coefficients);
 
     GHE ghe_a(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, true);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, false);
     GHE ghe_b(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_b, inputs.bh_resistance_b,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, true);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, false);
 
     // reading and creating load vector
     std::vector<double> bldgload;
@@ -264,8 +264,8 @@ int main() {
         }
 
         // Now run the GHE
-        double scaled_load_a = (-1*bldgload[time_step]/inputs.bh_length_a); // Only for passing load directly, to match python
-        double scaled_load_b = (-1*bldgload[time_step]/inputs.bh_length_b); // Only for passing load directly, to match python
+        double scaled_load_a = (-1*bldgload[time_step]/inputs.bh_length_a/inputs.num_bh_a); // Only for passing load directly, to match python
+        double scaled_load_b = (-1*bldgload[time_step]/inputs.bh_length_b/inputs.num_bh_b); // Only for passing load directly, to match python
         
         Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
         Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b, Tr_a);

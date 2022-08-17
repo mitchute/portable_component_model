@@ -125,7 +125,7 @@ int main() {
     HeatPump hp_a(inputs.heating_coefficients, inputs.cooling_coefficients);
 
     GHE ghe_a(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, stand_in, stand_in, false);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, stand_in, stand_in, true);
 
     // reading and creating load vector
     std::vector<double> bldgload;
