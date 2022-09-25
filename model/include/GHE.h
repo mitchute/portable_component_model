@@ -47,10 +47,10 @@ class GHE {
     double q_delta;
     double current_GHEload = 0;
     int hours_per_timestep;
-    int hours_as_seconds;             // hourly data as seconds
+    int hours_as_seconds; // hourly data as seconds
     bool load_from_building;
     std::vector<double> calc_lntts;   // Calculated lntts values from num_time_steps
-    std::array<double, 2> c1 {0, 0};         // 0 index is self, 1 index is cross
+    std::array<double, 2> c1{0, 0};   // 0 index is self, 1 index is cross
     std::vector<double> g_func_self;  // g function output values
     std::vector<double> lntts_self;   // g function input values
     std::vector<double> g_func_cross; // g function output values

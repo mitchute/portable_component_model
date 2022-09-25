@@ -161,13 +161,12 @@ double GHE::simulate(int time_step, double ghe_inlet_temperature, double mass_fl
         if (time_step > 0) {
             current_GHEload = (ghe_inlet_temperature - soil_temp + ((ghe_load.back() * gn_self) * c0) - (c1[0] * c0)) /
                               ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
+        } else {
+            current_GHEload = (ghe_inlet_temperature - soil_temp - (c1[0] * c0)) /
+                              ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
         }
-        else {
-            current_GHEload = (ghe_inlet_temperature - soil_temp - (c1[0] * c0)) / ((0.5 * (bh_length / (mass_flow_rate * specific_heat))) + (gn_self * c0) + bh_resistance);
-        }
-    }
-    else {
-        //If ghe is constructed to pass the load directly to the ghe, this is called.
+    } else {
+        // If ghe is constructed to pass the load directly to the ghe, this is called.
         current_GHEload = GHE_load;
     }
 

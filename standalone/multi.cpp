@@ -1,9 +1,9 @@
 // ensure proper libraries are linked in the CMakeLists.txt file for building the executable
 //#include "main.h"
 #include <GHE.h>
+#include <filesystem>
 #include <iostream>
 #include <json.hpp>
-#include <filesystem>
 
 using json = nlohmann::json;
 
@@ -206,33 +206,52 @@ int main() {
             << ","
             << "bldgload"
             << "\n";
-    debug << "time_step" << ","
-          << "ghe_a.calc_lntts[time_step]" << ","
-          << "ghe_a.interp_g_self[time_step]" << ","
-          << "ghe_a.interp_g_cross[time_step]" << ","
-          << "ghe_a.current_GHEload" << ","
-          << "ghe_a.c1[0]" << ","
-          << "ghe_a.c1[1]" << ","
-          << "ghe_a.internal_Tr" << ","
-          << "ghe_b.cross_Tr" << ","
-          << "ghe_a.BH_temp" << ","
-          << "ghe_a.outlet_temperature" << ","
-          << "ghe_a.MFT" << ","
-          << "bldgload[time_step]" << "\n";
+    debug << "time_step"
+          << ","
+          << "ghe_a.calc_lntts[time_step]"
+          << ","
+          << "ghe_a.interp_g_self[time_step]"
+          << ","
+          << "ghe_a.interp_g_cross[time_step]"
+          << ","
+          << "ghe_a.current_GHEload"
+          << ","
+          << "ghe_a.c1[0]"
+          << ","
+          << "ghe_a.c1[1]"
+          << ","
+          << "ghe_a.internal_Tr"
+          << ","
+          << "ghe_b.cross_Tr"
+          << ","
+          << "ghe_a.BH_temp"
+          << ","
+          << "ghe_a.outlet_temperature"
+          << ","
+          << "ghe_a.MFT"
+          << ","
+          << "bldgload[time_step]"
+          << "\n";
 
     // Create instances of classes
     main_vars inputs = load_data();
-    if (inputs.file_open){
+    if (inputs.file_open) {
         return 1;
     }
     Pump pump;
     HeatPump hp_a(inputs.heating_coefficients, inputs.cooling_coefficients);
     HeatPump hp_b(inputs.heating_coefficients, inputs.cooling_coefficients);
 
+    bool load_from_building = true;
+    if (load_from_building) {
+        std::cout << "building loaded"
+                  << "\n";
+    }
+
     GHE ghe_a(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_a, inputs.bh_resistance_a,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, false);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_a, inputs.lntts_self_a, inputs.g_cross_a, inputs.lntts_cross_a, load_from_building);
     GHE ghe_b(inputs.num_time_steps, inputs.hr_per_timestep, inputs.soil_temp, inputs.specific_heat, inputs.bh_length_b, inputs.bh_resistance_b,
-              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, false);
+              inputs.soil_conduct, inputs.rho_cp, inputs.g_self_b, inputs.lntts_self_b, inputs.g_cross_b, inputs.lntts_cross_b, load_from_building);
 
     // reading and creating load vector
     std::vector<double> bldgload;
@@ -264,35 +283,19 @@ int main() {
         }
 
         // Now run the GHE
-        double scaled_load_a = (-1*bldgload[time_step]/inputs.bh_length_a/inputs.num_bh_a); // Only for passing load directly, to match python
-        double scaled_load_b = (-1*bldgload[time_step]/inputs.bh_length_b/inputs.num_bh_b); // Only for passing load directly, to match python
-        
+        double scaled_load_a = (-1 * bldgload[time_step] / inputs.bh_length_a / inputs.num_bh_a); // Only for passing load directly, to match python
+        double scaled_load_b = (-1 * bldgload[time_step] / inputs.bh_length_b / inputs.num_bh_b); // Only for passing load directly, to match python
+
         Tr_a = ghe_a.simulate(time_step, hp_a.outlet_temperature, pump.flow_rate, scaled_load_a, Tr_b);
         Tr_b = ghe_b.simulate(time_step, hp_b.outlet_temperature, pump.flow_rate, scaled_load_b, Tr_a);
 
         // Finally, write data for each loop iteration
-        outputs << time_step << "," << -1*ghe_a.ghe_load.back() << ","
-                << -1*ghe_b.ghe_load.back()
-                << "," << hp_a.outlet_temperature << ","
-                << hp_b.outlet_temperature
-                << "," << ghe_a.outlet_temperature << ","
-                << ghe_b.outlet_temperature
-                << "," << ghe_a.MFT << ","
-                << ghe_b.MFT
-                << "," << bldgload[time_step] << "\n";
-        debug << time_step << ","
-              << ghe_a.calc_lntts[time_step] << ","
-              << ghe_a.interp_g_self[time_step] << ","
-              << ghe_b.interp_g_cross[time_step] << ","
-              << ghe_a.current_GHEload << ","
-              << ghe_a.c1[0] << ","
-              << ghe_a.c1[1] << ","
-              << ghe_a.internal_Tr << ","
-              << ghe_b.cross_Tr << ","
-              << ghe_a.BH_temp << ","
-              << ghe_a.outlet_temperature << ","
-              << ghe_a.MFT << ","
-              << bldgload[time_step] << "\n";
+        outputs << time_step << "," << -1 * ghe_a.ghe_load.back() << "," << -1 * ghe_b.ghe_load.back() << "," << hp_a.outlet_temperature << ","
+                << hp_b.outlet_temperature << "," << ghe_a.outlet_temperature << "," << ghe_b.outlet_temperature << "," << ghe_a.MFT << ","
+                << ghe_b.MFT << "," << bldgload[time_step] << "\n";
+        debug << time_step << "," << ghe_a.calc_lntts[time_step] << "," << ghe_a.interp_g_self[time_step] << "," << ghe_b.interp_g_cross[time_step]
+              << "," << ghe_a.current_GHEload << "," << ghe_a.c1[0] << "," << ghe_a.c1[1] << "," << ghe_a.internal_Tr << "," << ghe_b.cross_Tr << ","
+              << ghe_a.BH_temp << "," << ghe_a.outlet_temperature << "," << ghe_a.MFT << "," << bldgload[time_step] << "\n";
     }
     std::cout << "Executed for " << inputs.num_time_steps << " iterations"
               << "\n";
@@ -300,6 +303,8 @@ int main() {
     return 0;
 }
 
-//Notes for debugging: 
+// Notes for debugging:
 
-//After talking to Matt we determined problem is the G-function. Looking at outputs from running test.json and C.json in the same code (single.cpp) there are spikes in Tout that occur in C.json that arent in test.json. Vice versa there are spikes in c1[0] in test.json that arent in C.json. Becasue the loads are constant and change at identical times this means the error has to be in the g function 
+// After talking to Matt we determined problem is the G-function. Looking at outputs from running test.json and C.json in the same code (single.cpp)
+// there are spikes in Tout that occur in C.json that arent in test.json. Vice versa there are spikes in c1[0] in test.json that arent in C.json.
+// Becasue the loads are constant and change at identical times this means the error has to be in the g function
