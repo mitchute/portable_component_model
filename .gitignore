@@ -1,6 +1,13 @@
+~$*
+.DS_Store
+
 .idea
 cmake-build-debug
 build
+outputs/*
+/standalone/outputs/*
+/test/outputs/*
+
 
 # Prerequisites
 *.d
@@ -34,3 +41,4 @@ build
 *.exe
 *.out
 *.app
+
